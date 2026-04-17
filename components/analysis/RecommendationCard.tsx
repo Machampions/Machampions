@@ -1,74 +1,81 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import Image from "next/image";
-import type { Recommendation } from "@/lib/analysis";
-import { toLightPokemon } from "@/lib/pokeapi";
-import { ensurePokemonDetail } from "@/hooks/usePokemonDetail";
-import { TypePill } from "@/components/ui/TypePill";
+import type { LineupRecommendation } from "@/lib/analysis";
+import type { Pokemon } from "@/lib/types";
 import { ScoreBar } from "./ScoreBar";
 import { useAppStore } from "@/stores/appStore";
 
-export function RecommendationCard({ rec }: { rec: Recommendation }) {
-  const myPool = useAppStore((s) => s.myPool);
-  const setSlot = useAppStore((s) => s.setSlot);
-  const slotOpen = myPool.findIndex((p) => p === null);
+export function RecommendationCard({ rec }: { rec: LineupRecommendation }) {
+  const setBattle = useAppStore((s) => s.setBattle);
+  const myBattle = useAppStore((s) => s.myBattle);
 
-  async function addToTeam() {
-    if (slotOpen === -1) return;
-    try {
-      const data = await ensurePokemonDetail(rec.pokemon.slug);
-      setSlot("my", slotOpen, toLightPokemon(data));
-    } catch {
-      // swallow — user can retry
-    }
-  }
+  const isActive =
+    myBattle.length === rec.myIndices.length &&
+    rec.myIndices.every((i) => myBattle.includes(i));
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-3 flex gap-3">
-      <div className="flex flex-col items-center gap-1 shrink-0">
-        <Image
-          src={rec.pokemon.spriteUrl}
-          alt={rec.pokemon.name}
-          width={56}
-          height={56}
-          className="h-14 w-14 [image-rendering:pixelated]"
-          unoptimized
-        />
-        <div className="flex gap-1 flex-wrap justify-center">
-          {rec.pokemon.types.map((t) => (
-            <TypePill key={t} type={t} size="xs" />
-          ))}
-        </div>
+    <div className="rounded-lg border border-border bg-surface p-3 flex flex-col gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <LineupRow mons={rec.myLineup} tone="primary" />
+        <ArrowRight size={14} className="text-muted shrink-0" />
+        <LineupRow mons={rec.predictedOpp} tone="danger" />
+        <button
+          type="button"
+          onClick={() => setBattle("my", rec.myIndices)}
+          disabled={isActive}
+          className={`ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${
+            isActive
+              ? "bg-surface-2 text-muted cursor-default"
+              : "bg-primary text-bg hover:opacity-90"
+          }`}
+        >
+          {isActive ? (
+            <>
+              <Check size={12} /> Active
+            </>
+          ) : (
+            "Use this lineup"
+          )}
+        </button>
       </div>
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate">
-              {rec.pokemon.name}
-            </div>
-            <div className="text-[11px] text-muted">{rec.reason}</div>
-          </div>
-          <button
-            type="button"
-            onClick={addToTeam}
-            disabled={slotOpen === -1}
-            className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-medium text-bg disabled:opacity-40"
-          >
-            <Plus size={12} /> Add
-          </button>
-        </div>
-        <div className="mt-1 flex flex-col gap-0.5">
-          <ScoreBar label="Off" value={rec.breakdown.offense} color="danger" />
-          <ScoreBar label="Def" value={rec.breakdown.defense} color="primary" />
-          <ScoreBar label="Meta" value={rec.breakdown.meta} color="gold" />
-          <ScoreBar
-            label="Synergy"
-            value={rec.breakdown.synergy}
-            color="success"
+      <p className="text-[11px] text-muted">{rec.reason}</p>
+      <div className="flex flex-col gap-0.5">
+        <ScoreBar label="Score" value={rec.score} color="primary" />
+        <ScoreBar label="Off" value={rec.offensePct} color="danger" />
+      </div>
+    </div>
+  );
+}
+
+function LineupRow({
+  mons,
+  tone,
+}: {
+  mons: Pokemon[];
+  tone: "primary" | "danger";
+}) {
+  const border =
+    tone === "primary" ? "border-primary/40" : "border-danger/40";
+  return (
+    <div className="flex items-center gap-1">
+      {mons.map((p) => (
+        <div
+          key={p.slug}
+          title={p.name}
+          className={`rounded border ${border} bg-surface-2 p-0.5`}
+        >
+          <Image
+            src={p.spriteUrl}
+            alt={p.name}
+            width={40}
+            height={40}
+            className="h-10 w-10 [image-rendering:pixelated]"
+            unoptimized
           />
         </div>
-      </div>
+      ))}
     </div>
   );
 }

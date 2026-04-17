@@ -151,141 +151,115 @@ export function compositeTeamScore(
   return Math.max(0, Math.min(100, cov * 0.55 + def * 0.45 - gapPenalty));
 }
 
-export interface RecommendationBreakdown {
-  offense: number;
-  defense: number;
-  meta: number;
-  synergy: number;
-  total: number;
+export function combos<T>(items: T[], k: number): T[][] {
+  const out: T[][] = [];
+  if (k < 0 || k > items.length) return out;
+  const pick: T[] = [];
+  const walk = (start: number) => {
+    if (pick.length === k) {
+      out.push(pick.slice());
+      return;
+    }
+    const need = k - pick.length;
+    const last = items.length - need;
+    for (let i = start; i <= last; i++) {
+      pick.push(items[i]);
+      walk(i + 1);
+      pick.pop();
+    }
+  };
+  walk(0);
+  return out;
 }
 
-export interface Recommendation {
-  pokemon: Pokemon;
-  usage?: UsageData | null;
-  usagePct: number;
-  breakdown: RecommendationBreakdown;
+export interface LineupRecommendation {
+  myIndices: number[];
+  myLineup: Pokemon[];
+  predictedOppIndices: number[];
+  predictedOpp: Pokemon[];
+  score: number;
+  offensePct: number;
   reason: string;
 }
 
-function scoreOffense(
-  candidate: MonContext,
-  opps: MonContext[],
-): number {
-  if (opps.length === 0) return 50;
-  const avg =
-    opps.reduce((a, o) => a + bestOffense(candidate, o.pokemon), 0) /
-    opps.length;
-  return Math.min(100, avg * 50);
-}
-
-function scoreDefense(candidate: MonContext, opps: MonContext[]): number {
-  if (opps.length === 0) return 50;
-  const worst =
-    opps.reduce(
-      (a, o) =>
-        a + worstIncoming(candidate.pokemon.types, attackingTypes(o)),
-      0,
-    ) / opps.length;
-  return Math.max(0, 100 - worst * 40);
-}
-
-function scoreMeta(usagePct: number): number {
-  return Math.min(100, usagePct * 2.2);
-}
-
-function scoreSynergy(
-  candidate: MonContext,
-  teammates: MonContext[],
-): number {
-  if (teammates.length === 0) return 50;
-  let score = 50;
-  const candDefTypes = candidate.pokemon.types;
-  for (const t of teammates) {
-    const teammateWeak = ALL_TYPES.filter(
-      (typ) => effectiveness(typ, t.pokemon.types) >= 2,
-    );
-    const candidateResists = teammateWeak.filter(
-      (typ) => effectiveness(typ, candDefTypes) <= 1,
-    );
-    score += candidateResists.length * 3;
+function lineupReason(mine: MonContext[], opps: MonContext[]): string {
+  const hitsHard = opps
+    .filter((o) => mine.some((m) => bestOffense(m, o.pokemon) >= 2))
+    .map((o) => o.pokemon.name);
+  const walls = opps
+    .filter((o) =>
+      mine.some(
+        (m) => worstIncoming(m.pokemon.types, attackingTypes(o)) <= 0.5,
+      ),
+    )
+    .map((o) => o.pokemon.name);
+  const parts: string[] = [];
+  if (hitsHard.length > 0) {
+    const suffix = hitsHard.length > 2 ? " +more" : "";
+    parts.push(`hits ${hitsHard.slice(0, 2).join(" & ")}${suffix} hard`);
   }
-  const teammateUsageNames = new Set(
-    teammates.flatMap(
-      (t) => t.usage?.teammates.map((tm) => tm.name) ?? [],
-    ),
-  );
-  if (teammateUsageNames.has(candidate.pokemon.slug)) score += 15;
-  return Math.min(100, score);
+  const uniqueWalls = walls.filter((w) => !hitsHard.includes(w));
+  if (uniqueWalls.length > 0) {
+    parts.push(`walls ${uniqueWalls.slice(0, 2).join(" & ")}`);
+  }
+  if (parts.length === 0) {
+    return "Balanced matchup against their best response.";
+  }
+  return parts.join("; ") + ".";
 }
 
-export function recommendNext(
-  team: MonContext[],
-  opps: MonContext[],
-  candidates: {
-    pokemon: Pokemon;
-    usage?: UsageData | null;
-    usagePct: number;
-  }[],
+export function recommendLineups(
+  myPool: (Pokemon | null)[],
+  oppPool: (Pokemon | null)[],
+  usageCache: Map<string, UsageData>,
+  format: string,
   limit = 3,
-): Recommendation[] {
-  const scored: Recommendation[] = candidates.map((c) => {
-    const ctx: MonContext = { pokemon: c.pokemon, usage: c.usage };
-    const offense = scoreOffense(ctx, opps);
-    const defense = scoreDefense(ctx, opps);
-    const meta = scoreMeta(c.usagePct);
-    const synergy = scoreSynergy(ctx, team);
-    const total =
-      offense * 0.35 + defense * 0.25 + meta * 0.15 + synergy * 0.25;
-    const dominant = (
-      [
-        ["offense", offense] as const,
-        ["defense", defense] as const,
-        ["synergy", synergy] as const,
-        ["meta", meta] as const,
-      ] as const
-    ).reduce((a, b) => (b[1] > a[1] ? b : a));
-    const reason = reasonFor(dominant[0], ctx, opps);
+): LineupRecommendation[] {
+  const myFilled = myPool
+    .map((p, i) => (p ? i : -1))
+    .filter((i) => i >= 0);
+  const oppFilled = oppPool
+    .map((p, i) => (p ? i : -1))
+    .filter((i) => i >= 0);
+
+  if (myFilled.length < 3 || oppFilled.length < 3) return [];
+
+  const ctx = (p: Pokemon): MonContext => ({
+    pokemon: p,
+    usage: usageCache.get(`${format}:${p.slug}`) ?? null,
+  });
+
+  const myCombos = combos(myFilled, 3);
+  const oppCombos = combos(oppFilled, 3);
+
+  const results: LineupRecommendation[] = myCombos.map((myIdx) => {
+    const mine = myIdx.map((i) => ctx(myPool[i]!));
+
+    let bestOpp: number[] = oppCombos[0];
+    let bestOppScore = -Infinity;
+    for (const oppIdx of oppCombos) {
+      const opps = oppIdx.map((i) => ctx(oppPool[i]!));
+      const s = compositeTeamScore(opps, mine);
+      if (s > bestOppScore) {
+        bestOppScore = s;
+        bestOpp = oppIdx;
+      }
+    }
+
+    const predOpp = bestOpp.map((i) => ctx(oppPool[i]!));
+    const score = compositeTeamScore(mine, predOpp);
+    const offensePct = offensiveCoverageScore(mine, predOpp).pct;
+
     return {
-      pokemon: c.pokemon,
-      usage: c.usage,
-      usagePct: c.usagePct,
-      breakdown: { offense, defense, meta, synergy, total },
-      reason,
+      myIndices: myIdx,
+      myLineup: mine.map((m) => m.pokemon),
+      predictedOppIndices: bestOpp,
+      predictedOpp: predOpp.map((p) => p.pokemon),
+      score,
+      offensePct,
+      reason: lineupReason(mine, predOpp),
     };
   });
-  return scored.sort((a, b) => b.breakdown.total - a.breakdown.total).slice(0, limit);
-}
 
-function reasonFor(
-  dim: "offense" | "defense" | "meta" | "synergy",
-  c: MonContext,
-  opps: MonContext[],
-): string {
-  const name = c.pokemon.name;
-  if (dim === "offense") {
-    const hits = opps
-      .filter((o) => bestOffense(c, o.pokemon) >= 2)
-      .map((o) => o.pokemon.name)
-      .slice(0, 2);
-    if (hits.length) return `${name} hits ${hits.join(" & ")} hard.`;
-    return `${name} applies broad offensive pressure.`;
-  }
-  if (dim === "defense") {
-    const resists = opps
-      .filter(
-        (o) =>
-          worstIncoming(c.pokemon.types, attackingTypes(o)) <= 0.5,
-      )
-      .map((o) => o.pokemon.name)
-      .slice(0, 2);
-    if (resists.length)
-      return `${name} walls ${resists.join(" & ")}.`;
-    return `${name} is defensively flexible against this team.`;
-  }
-  if (dim === "synergy") {
-    return `${name} plugs type gaps on your side.`;
-  }
-  return `${name} is a meta anchor (${Math.round(
-    Math.min(100, c.usage ? 50 + c.usage.usagePct : 50),
-  )}% usage).`;
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
