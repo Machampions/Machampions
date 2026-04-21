@@ -8,7 +8,6 @@ import type { Pokemon } from "@/lib/types";
 
 export function PokemonSlot({
   pokemon,
-  placeholder,
   inBattle,
   onClick,
   onRemove,
@@ -16,7 +15,6 @@ export function PokemonSlot({
   dim,
 }: {
   pokemon: Pokemon | null;
-  placeholder?: React.ReactNode;
   inBattle?: boolean;
   onClick?: () => void;
   onRemove?: () => void;
@@ -26,7 +24,7 @@ export function PokemonSlot({
   if (!pokemon) {
     return (
       <div className="group relative flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-surface-2/40 p-2 aspect-square text-muted">
-        {placeholder ?? <span className="text-[11px]">Empty</span>}
+        <span className="text-[11px]">Empty</span>
       </div>
     );
   }

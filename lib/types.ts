@@ -116,6 +116,9 @@ export interface SavedTeam {
   name: string;
   members: string[];
   battleSelection?: number[];
+  items?: (string | null)[];
+  abilities?: (string | null)[];
+  movesets?: (string | null)[][];
   createdAt: number;
 }
 

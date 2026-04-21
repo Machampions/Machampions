@@ -4,7 +4,6 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { APIStatusDot } from "@/components/ui/APIStatusDot";
 import { TeamPanel } from "@/components/team/TeamPanel";
 import { SavedTeamsList } from "@/components/team/SavedTeamsList";
-import { GhostSuggestion } from "@/components/team/GhostSuggestion";
 import { useApiStatus } from "@/hooks/useApiStatus";
 import { useOpponentSuggestions } from "@/hooks/useOpponentSuggestions";
 import { CoverageMatrix } from "@/components/analysis/CoverageMatrix";
@@ -17,18 +16,7 @@ import { useAppStore } from "@/stores/appStore";
 export default function Home() {
   useApiStatus();
   const format = useAppStore((s) => s.format);
-  const oppPool = useAppStore((s) => s.oppPool);
-  const suggestions = useOpponentSuggestions();
-
-  // Map empty-slot-index → suggestion (walks in slot order, pulls from ranked list)
-  const suggestionBySlot = new Map<number, (typeof suggestions)[number]>();
-  let sIdx = 0;
-  oppPool.forEach((p, i) => {
-    if (!p && suggestions[sIdx]) {
-      suggestionBySlot.set(i, suggestions[sIdx]);
-      sIdx++;
-    }
-  });
+  const oppSuggestions = useOpponentSuggestions();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -58,11 +46,7 @@ export default function Home() {
             side="opp"
             title="Opponent Pool"
             accent="danger"
-            slotPlaceholder={(i) => {
-              const s = suggestionBySlot.get(i);
-              if (!s) return null;
-              return <GhostSuggestion suggestion={s} slotIdx={i} />;
-            }}
+            suggestions={oppSuggestions}
           />
           <CoverageMatrix />
           <RecommendationPanel />

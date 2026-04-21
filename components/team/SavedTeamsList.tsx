@@ -5,6 +5,26 @@ import { Save, Trash2, Upload, Download, RotateCcw } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { ensurePokemonDetail } from "@/hooks/usePokemonDetail";
 import { toLightPokemon } from "@/lib/pokeapi";
+import {
+  formatShowdown,
+  moveToSlug,
+  parseShowdown,
+  slugToPretty,
+} from "@/lib/showdown";
+
+const SHOWDOWN_PLACEHOLDER = `Incineroar @ Sitrus Berry
+Ability: Intimidate
+- Fake Out
+- Knock Off
+- Flare Blitz
+- Parting Shot
+
+Whimsicott @ Focus Sash
+Ability: Prankster
+- Tailwind
+- Moonblast
+- Encore
+- Protect`;
 
 export function SavedTeamsList() {
   const savedTeams = useAppStore((s) => s.savedTeams);
@@ -12,13 +32,17 @@ export function SavedTeamsList() {
   const deleteTeam = useAppStore((s) => s.deleteTeam);
   const loadTeam = useAppStore((s) => s.loadTeam);
   const myPool = useAppStore((s) => s.myPool);
+  const myItems = useAppStore((s) => s.myItems);
+  const myAbilities = useAppStore((s) => s.myAbilities);
+  const myMovesets = useAppStore((s) => s.myMovesets);
   const resetAll = useAppStore((s) => s.resetAll);
-  const setSlot = useAppStore((s) => s.setSlot);
+  const importMyTeam = useAppStore((s) => s.importMyTeam);
 
   const [name, setName] = useState("");
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const canSave = myPool.some((p) => p);
 
@@ -29,36 +53,57 @@ export function SavedTeamsList() {
   }
 
   function handleExport(): string {
-    return myPool.map((p) => p?.slug ?? "").filter(Boolean).join(",");
+    const members = myPool
+      .map((p, i) =>
+        p
+          ? {
+              species: p.name,
+              item: myItems[i] ?? undefined,
+              ability: myAbilities[i] ?? undefined,
+              moves: (myMovesets[i] ?? []).map((m) =>
+                m ? slugToPretty(m) : null,
+              ),
+            }
+          : null,
+      )
+      .filter((m): m is NonNullable<typeof m> => !!m);
+    return formatShowdown(members);
   }
 
   async function handleImport() {
     setImportError(null);
-    const slugs = importText
-      .split(/[,\s\n]+/)
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-      .slice(0, 6);
-    if (slugs.length === 0) {
-      setImportError("Paste a comma-separated list of Pokémon names.");
+    const parsed = parseShowdown(importText);
+    if (parsed.length === 0) {
+      setImportError("Couldn't parse any Pokémon — paste a Showdown export.");
       return;
     }
+    setImporting(true);
     const results = await Promise.allSettled(
-      slugs.map((s) => ensurePokemonDetail(s)),
+      parsed.slice(0, 6).map((m) => ensurePokemonDetail(m.slug)),
     );
-    resetAll();
-    let placed = 0;
+    const members: Parameters<typeof importMyTeam>[0] = [];
     const failed: string[] = [];
     results.forEach((r, i) => {
+      const src = parsed[i];
       if (r.status === "fulfilled") {
-        setSlot("my", placed, toLightPokemon(r.value));
-        placed++;
+        members.push({
+          pokemon: toLightPokemon(r.value),
+          item: src.item ?? null,
+          ability: src.ability ?? null,
+          moves: src.moves.map(moveToSlug),
+        });
       } else {
-        failed.push(slugs[i]);
+        failed.push(src.species);
       }
     });
-    if (failed.length) {
+    setImporting(false);
+    if (members.length === 0) {
       setImportError(`Not found: ${failed.join(", ")}`);
+      return;
+    }
+    importMyTeam(members);
+    if (failed.length) {
+      setImportError(`Imported ${members.length}. Not found: ${failed.join(", ")}`);
     } else {
       setImportText("");
       setShowImport(false);
@@ -117,12 +162,16 @@ export function SavedTeamsList() {
 
       {showImport && (
         <div className="rounded-md border border-border bg-surface-2 p-2 flex flex-col gap-2">
+          <div className="text-[11px] text-muted">
+            Paste a Pokémon Showdown export (species, item, ability, moves).
+          </div>
           <textarea
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
-            rows={3}
-            placeholder="pikachu, charizard, dragonite…"
-            className="w-full bg-bg border border-border rounded px-2 py-1 text-xs font-mono outline-none focus:border-primary"
+            rows={8}
+            placeholder={SHOWDOWN_PLACEHOLDER}
+            spellCheck={false}
+            className="w-full bg-bg border border-border rounded px-2 py-1 text-xs font-mono outline-none focus:border-primary whitespace-pre"
           />
           {importError && (
             <p className="text-[11px] text-danger">{importError}</p>
@@ -130,9 +179,10 @@ export function SavedTeamsList() {
           <button
             type="button"
             onClick={handleImport}
-            className="self-end rounded bg-primary px-2 py-1 text-xs text-bg font-medium"
+            disabled={importing}
+            className="self-end rounded bg-primary px-2 py-1 text-xs text-bg font-medium disabled:opacity-40"
           >
-            Load
+            {importing ? "Loading…" : "Load"}
           </button>
         </div>
       )}

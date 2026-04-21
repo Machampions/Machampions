@@ -15,6 +15,7 @@ export interface Suggestion {
 }
 
 const TEAMMATE_BOOST_BASE = 20;
+const MAX_SUGGESTIONS = 8;
 
 export function useOpponentSuggestions(): Suggestion[] {
   const format = useAppStore((s) => s.format);
@@ -34,8 +35,6 @@ export function useOpponentSuggestions(): Suggestion[] {
     const usedSlugs = new Set<string>();
     oppPool.forEach((p) => p && usedSlugs.add(p.slug));
     myPool.forEach((p) => p && usedSlugs.add(p.slug));
-    const emptyCount = oppPool.filter((p) => !p).length;
-    if (emptyCount === 0) return [];
 
     const teammateBoost = new Map<string, { pct: number; from: string }>();
     oppPool.forEach((p) => {
@@ -63,7 +62,7 @@ export function useOpponentSuggestions(): Suggestion[] {
       })
       .sort((a, b) => b.score - a.score);
 
-    return scored.slice(0, emptyCount).map<Suggestion>((s) => ({
+    return scored.slice(0, MAX_SUGGESTIONS).map<Suggestion>((s) => ({
       slug: s.entry.slug,
       displayName: s.entry.displayName,
       usagePct: s.entry.usagePct,

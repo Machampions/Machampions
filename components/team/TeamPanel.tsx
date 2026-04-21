@@ -6,15 +6,16 @@ import { PokemonSearch } from "./PokemonSearch";
 import { PokemonSlot } from "./PokemonSlot";
 import { POOL_SLOTS, useAppStore } from "@/stores/appStore";
 import type { Pokemon } from "@/lib/types";
+import type { Suggestion } from "@/hooks/useOpponentSuggestions";
 
 interface Props {
   side: "my" | "opp";
   title: string;
   accent?: "primary" | "danger";
-  slotPlaceholder?: (idx: number) => React.ReactNode;
+  suggestions?: Suggestion[];
 }
 
-export function TeamPanel({ side, title, accent = "primary", slotPlaceholder }: Props) {
+export function TeamPanel({ side, title, accent = "primary", suggestions }: Props) {
   const pool = useAppStore((s) => (side === "my" ? s.myPool : s.oppPool));
   const battle = useAppStore((s) =>
     side === "my" ? s.myBattle : s.oppBattle,
@@ -52,13 +53,16 @@ export function TeamPanel({ side, title, accent = "primary", slotPlaceholder }: 
           <Eraser size={12} /> Clear
         </button>
       </div>
-      <PokemonSearch onPick={addPokemon} placeholder={`Add to ${title}…`} />
+      <PokemonSearch
+        onPick={addPokemon}
+        placeholder={`Add to ${title}…`}
+        suggestions={suggestions}
+      />
       <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
         {pool.map((mon, i) => (
           <PokemonSlot
             key={i}
             pokemon={mon}
-            placeholder={slotPlaceholder?.(i)}
             inBattle={battle.includes(i)}
             onClick={mon ? () => openDrawer(side, i) : undefined}
             onRemove={mon ? () => setSlot(side, i, null) : undefined}
