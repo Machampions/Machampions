@@ -6,7 +6,7 @@ import { ALL_TYPES } from "@/lib/types";
 import { attackingTypes, type MonContext } from "@/lib/analysis";
 import { effectiveness } from "@/lib/typeChart";
 import { TypePill } from "@/components/ui/TypePill";
-import { multiplierColor, multiplierLabel } from "@/lib/theme";
+import { multiplierBgVar, multiplierLabel, multiplierTextVar } from "@/lib/theme";
 import { useAppStore } from "@/stores/appStore";
 
 export function WeaknessesTab({ pokemon }: { pokemon: Pokemon }) {
@@ -105,8 +105,11 @@ export function WeaknessesTab({ pokemon }: { pokemon: Pokemon }) {
                 />
                 <span className="flex-1 truncate text-xs">{t.opp.name}</span>
                 <span
-                  className="px-1.5 rounded font-mono text-[11px] text-white"
-                  style={{ background: multiplierColor(t.mult) }}
+                  className="px-1.5 rounded font-mono text-[11px]"
+                  style={{
+                    background: multiplierBgVar(t.mult),
+                    color: multiplierTextVar(t.mult),
+                  }}
                 >
                   {multiplierLabel(t.mult)}
                 </span>

@@ -1,18 +1,36 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0b0d10;
-  --color-surface: #141820;
-  --color-surface-2: #1b212b;
-  --color-border: #242a33;
-  --color-text: #e7ecf2;
-  --color-muted: #8b95a5;
-  --color-primary: #4f98a3;
-  --color-primary-soft: #2d5b63;
-  --color-danger: #e04c59;
-  --color-danger-soft: #4a1d24;
+  /* Dark (default) — warm slate with purple/red accents */
+  --color-bg: #0f1115;
+  --color-surface: #161920;
+  --color-surface-2: #1d2028;
+  --color-border: #262a33;
+  --color-border-hi: #363a44;
+  --color-text: #e8e9ec;
+  --color-muted: #8a8f9c;
+  --color-dim: #5c616d;
+  --color-primary: #b48cf0;
+  --color-primary-soft: rgba(180, 140, 240, 0.15);
+  --color-danger: #f26a5f;
+  --color-danger-soft: rgba(242, 106, 95, 0.15);
   --color-gold: #e8c46a;
   --color-success: #5bc28f;
+
+  /* Matrix multiplier cell colors */
+  --color-m-zero: #3a2a2e;
+  --color-m-zero-text: #e0c8c8;
+  --color-m-half: #2d4b6e;
+  --color-m-half-text: #d8e6f5;
+  --color-m-one: #1d2028;
+  --color-m-one-text: #7a7f8d;
+  --color-m-two: #7a3528;
+  --color-m-two-text: #ffe0d6;
+  --color-m-four: #b84436;
+  --color-m-four-text: #fff4f0;
+
+  --color-chip-bg: #22262f;
+  --color-chip-text: #c4c8d4;
 
   --color-type-normal: #a8a77a;
   --color-type-fire: #ee8130;
@@ -38,18 +56,34 @@
 }
 
 [data-theme="light"] {
-  --color-bg: #f7f8fa;
+  --color-bg: #f5f4f0;
   --color-surface: #ffffff;
-  --color-surface-2: #eef0f4;
-  --color-border: #d9dee6;
-  --color-text: #10151c;
-  --color-muted: #5a6574;
-  --color-primary: #2e7a85;
-  --color-primary-soft: #b6e0e6;
-  --color-danger: #c2384a;
-  --color-danger-soft: #f3c5ca;
+  --color-surface-2: #f0efea;
+  --color-border: #e3e0d8;
+  --color-border-hi: #c8c4b8;
+  --color-text: #1a1a1c;
+  --color-muted: #6b6c72;
+  --color-dim: #9a9a9f;
+  --color-primary: #6e3fb5;
+  --color-primary-soft: rgba(110, 63, 181, 0.12);
+  --color-danger: #d0342c;
+  --color-danger-soft: rgba(208, 52, 44, 0.10);
   --color-gold: #b88a1a;
   --color-success: #228a57;
+
+  --color-m-zero: #b9a8a8;
+  --color-m-zero-text: #3a2525;
+  --color-m-half: #b8d0e8;
+  --color-m-half-text: #1a3450;
+  --color-m-one: #ecebe3;
+  --color-m-one-text: #6a6960;
+  --color-m-two: #f0a896;
+  --color-m-two-text: #4a1a10;
+  --color-m-four: #d76a56;
+  --color-m-four-text: #ffffff;
+
+  --color-chip-bg: #eeece4;
+  --color-chip-text: #4a4b52;
 }
 
 html,
@@ -63,8 +97,13 @@ body {
   color: var(--color-text);
 }
 
-/* Thin scrollbars on dark mode */
+/* Thin scrollbars */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+}
+
+@keyframes mc-fade-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
 }

@@ -5,7 +5,7 @@ import type { Pokemon } from "@/lib/types";
 import { bestOffense, type MonContext } from "@/lib/analysis";
 import { worstIncoming } from "@/lib/typeChart";
 import { attackingTypes } from "@/lib/analysis";
-import { multiplierColor, multiplierLabel } from "@/lib/theme";
+import { multiplierBgVar, multiplierLabel, multiplierTextVar } from "@/lib/theme";
 import { useUsage } from "@/hooks/useUsage";
 import { useAppStore } from "@/stores/appStore";
 
@@ -75,14 +75,20 @@ export function CoverageTab({ pokemon }: { pokemon: Pokemon }) {
                 <span className="truncate text-xs">{r.opp.name}</span>
               </div>
               <span
-                className="justify-self-end px-1.5 rounded font-mono text-[10px] text-white"
-                style={{ background: multiplierColor(r.offense) }}
+                className="justify-self-end px-1.5 rounded font-mono text-[10px]"
+                style={{
+                  background: multiplierBgVar(r.offense),
+                  color: multiplierTextVar(r.offense),
+                }}
               >
                 {multiplierLabel(r.offense)}
               </span>
               <span
-                className="justify-self-end px-1.5 rounded font-mono text-[10px] text-white"
-                style={{ background: multiplierColor(r.defense) }}
+                className="justify-self-end px-1.5 rounded font-mono text-[10px]"
+                style={{
+                  background: multiplierBgVar(r.defense),
+                  color: multiplierTextVar(r.defense),
+                }}
               >
                 {multiplierLabel(r.defense)}
               </span>

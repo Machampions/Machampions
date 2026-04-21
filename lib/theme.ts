@@ -42,12 +42,22 @@ export const TYPE_HEX: Record<TypeName, string> = {
   fairy: "#d685ad",
 };
 
-export function multiplierColor(mult: number): string {
-  if (mult === 0) return "#2b1a1e";
-  if (mult < 1) return "#213b4a";
-  if (mult === 1) return "#1d232c";
-  if (mult === 2) return "#6a2230";
-  return "#9b2435";
+type MultKey = "zero" | "half" | "one" | "two" | "four";
+
+function multKey(mult: number): MultKey {
+  if (mult === 0) return "zero";
+  if (mult < 1) return "half";
+  if (mult === 1) return "one";
+  if (mult === 2) return "two";
+  return "four";
+}
+
+export function multiplierBgVar(mult: number): string {
+  return `var(--color-m-${multKey(mult)})`;
+}
+
+export function multiplierTextVar(mult: number): string {
+  return `var(--color-m-${multKey(mult)}-text)`;
 }
 
 export function multiplierLabel(mult: number): string {

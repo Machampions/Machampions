@@ -206,7 +206,7 @@ export function PokemonSearch({
         </p>
       )}
       {showFiltered && (
-        <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
+        <ul className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
           {filtered.map((item, i) => (
             <li key={item.slug}>
               <button
@@ -236,7 +236,7 @@ export function PokemonSearch({
         </ul>
       )}
       {showSuggestions && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-surface shadow-lg">
           <div className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-wide text-muted">
             Suggestions
           </div>

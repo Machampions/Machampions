@@ -1,257 +1,303 @@
 "use client";
 
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxOption,
-  ComboboxOptions,
-} from "@headlessui/react";
+import clsx from "clsx";
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { TypePill } from "@/components/ui/TypePill";
-import { multiplierColor, multiplierLabel } from "@/lib/theme";
+import { useState } from "react";
+import { multiplierBgVar, multiplierTextVar, multiplierLabel } from "@/lib/theme";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useAppStore } from "@/stores/appStore";
-import type { PokemonMove } from "@/lib/types";
 
-function MoveCombobox({
-  slotLabel,
-  selectedName,
-  moves,
-  onSelect,
-}: {
-  slotLabel: string;
-  selectedName: string | null;
-  moves: PokemonMove[];
-  onSelect: (moveName: string | null) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const selectedMove =
-    moves.find((move) => move.name.toLowerCase() === selectedName?.toLowerCase()) ??
-    null;
-  const filteredMoves = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return moves;
-    return moves.filter((move) => move.name.toLowerCase().includes(needle));
-  }, [moves, query]);
-
-  return (
-    <Combobox
-      value={selectedMove}
-      onChange={(move: PokemonMove | null) => {
-        onSelect(move?.name ?? null);
-        setQuery("");
-      }}
-      nullable
-    >
-      <div className="relative">
-        <div className="flex items-center gap-1 rounded border border-border bg-bg px-1.5 py-1 text-[10px]">
-          <span className="font-mono text-muted">{slotLabel}</span>
-          <ComboboxInput
-            aria-label={`${slotLabel} move search`}
-            className="min-w-0 flex-1 bg-transparent text-[10px] outline-none"
-            placeholder="Search move..."
-            displayValue={(move: PokemonMove | null) => move?.name ?? ""}
-            onChange={(event) => setQuery(event.target.value)}
-            onBlur={() => setQuery("")}
-          />
-        </div>
-        <ComboboxOptions className="absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded border border-border bg-surface shadow-lg text-[10px]">
-          <ComboboxOption
-            value={null}
-            className="cursor-pointer px-2 py-1 text-muted data-[focus]:bg-surface-2"
-          >
-            Clear selection
-          </ComboboxOption>
-          {filteredMoves.map((move) => (
-            <ComboboxOption
-              key={move.name}
-              value={move}
-              className="cursor-pointer px-2 py-1 data-[focus]:bg-surface-2"
-            >
-              {move.name} ({move.type}, {move.damageClass})
-            </ComboboxOption>
-          ))}
-          {filteredMoves.length === 0 && (
-            <li className="px-2 py-1 text-muted">No moves found.</li>
-          )}
-        </ComboboxOptions>
-      </div>
-    </Combobox>
-  );
-}
+const CELL = 54;
 
 export function CoverageMatrix() {
   const { matrix, mine, opps } = useAnalysis();
-  const myMovesets = useAppStore((s) => s.myMovesets);
-  const setMyMovesetMove = useAppStore((s) => s.setMyMovesetMove);
-  const clearMyMoveset = useAppStore((s) => s.clearMyMoveset);
+  const myPool = useAppStore((s) => s.myPool);
+  const oppPool = useAppStore((s) => s.oppPool);
+  const myBattle = useAppStore((s) => s.myBattle);
+  const oppBattle = useAppStore((s) => s.oppBattle);
+  const toggleBattle = useAppStore((s) => s.toggleBattle);
+
+  const [hoverCell, setHoverCell] = useState<[number, number] | null>(null);
+
   if (mine.length === 0 || opps.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted">
-        Draft both teams to see the coverage matrix.
-      </div>
+      <section className="rounded-[10px] border border-border bg-surface p-4 text-sm text-muted">
+        <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-text mb-2">
+          Coverage Matrix
+        </h3>
+        <p>Draft both teams to see the coverage matrix.</p>
+      </section>
     );
   }
+
+  // Resolve pool indices for each analyzed mon so we can drive battle-toggle on click
+  const myIndices = mine.map((m) => m.slotIndex ?? myPool.findIndex((p) => p?.slug === m.pokemon.slug));
+  const oppIndices = opps.map((o) => o.slotIndex ?? oppPool.findIndex((p) => p?.slug === o.pokemon.slug));
+
   return (
-    <div className="rounded-lg border border-border bg-surface p-3">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold">Coverage matrix</h3>
+    <section className="rounded-[10px] border border-border bg-surface">
+      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+        <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-text">
+          Coverage Matrix
+        </h3>
         <span className="font-mono text-[10px] text-muted">
-          selected moves offense / incoming defense
+          offense <span className="text-text">▲</span> &nbsp;·&nbsp; defense{" "}
+          <span className="text-text">▼</span>
         </span>
-      </div>
-      <section className="mb-3 rounded border border-border bg-surface-2/40 p-2">
-        <h4 className="text-[11px] uppercase tracking-wide text-muted mb-2">
-          My selected moves (4 per Pokémon)
-        </h4>
-        <div className="grid gap-2">
-          {mine.map((m) => {
-            const slotIndex = m.slotIndex ?? -1;
-            const selected =
-              slotIndex >= 0
-                ? myMovesets[slotIndex] ?? [null, null, null, null]
-                : [null, null, null, null];
-            const selectedMoves = selected
-              .map((moveName) =>
-                moveName
-                  ? m.pokemon.moves.find(
-                      (move) => move.name.toLowerCase() === moveName.toLowerCase(),
-                    )
-                  : undefined,
-              )
-              .filter((move): move is (typeof m.pokemon.moves)[number] => !!move);
-            const offensiveTypes = Array.from(
-              new Set(
-                selectedMoves
-                  .filter((move) => move.damageClass !== "status")
-                  .map((move) => move.type),
-              ),
-            );
-            return (
-              <div
-                key={`${m.pokemon.slug}-${slotIndex}`}
-                className="rounded border border-border bg-surface px-2 py-1.5"
-              >
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={m.pokemon.spriteUrl}
-                    alt={m.pokemon.name}
-                    width={24}
-                    height={24}
-                    className="h-6 w-6 [image-rendering:pixelated]"
-                    unoptimized
-                  />
-                  <span className="text-xs font-medium">{m.pokemon.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => clearMyMoveset(slotIndex)}
-                    className="ml-auto text-[10px] text-muted hover:text-danger"
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-1">
-                  {Array.from({ length: 4 }, (_, moveIdx) => (
-                    <div
-                      key={moveIdx}
-                      className="min-w-0"
-                    >
-                      <MoveCombobox
-                        slotLabel={`M${moveIdx + 1}`}
-                        selectedName={selected[moveIdx]}
-                        moves={m.pokemon.moves}
-                        onSelect={(moveName) =>
-                          setMyMovesetMove(slotIndex, moveIdx, moveName)
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1 min-h-4">
-                  {offensiveTypes.map((t, idx) => (
-                    <TypePill key={`${t}-${idx}`} type={t} size="xs" />
-                  ))}
-                  {selectedMoves.length > 0 && offensiveTypes.length === 0 && (
-                    <span className="text-[10px] text-muted">
-                      Only status moves selected; no offensive coverage applied.
-                    </span>
-                  )}
-                  {selectedMoves.length === 0 && (
-                    <span className="text-[10px] text-muted">
-                      No moves selected - using usage/STAB fallback.
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-      <div className="overflow-x-auto">
-        <table className="border-separate border-spacing-1">
+      </header>
+
+      {/* Matrix table */}
+      <div className="flex justify-center p-5 overflow-x-auto">
+        <table style={{ borderCollapse: "separate", borderSpacing: 4 }}>
           <thead>
             <tr>
               <th />
-              {opps.map((o) => (
-                <th key={o.pokemon.slug} className="p-0">
-                  <div className="flex flex-col items-center gap-0.5 w-14">
-                    <Image
-                      src={o.pokemon.spriteUrl}
-                      alt={o.pokemon.name}
-                      width={40}
-                      height={40}
-                      className="h-10 w-10 [image-rendering:pixelated]"
-                      unoptimized
-                    />
-                    <span className="text-[10px] truncate max-w-full text-danger">
-                      {o.pokemon.name}
-                    </span>
-                  </div>
-                </th>
-              ))}
+              {opps.map((o, ci) => {
+                const poolIdx = oppIndices[ci];
+                const isOppPicked = poolIdx >= 0 && oppBattle.includes(poolIdx);
+                const hasOppPicks = oppBattle.length > 0;
+                return (
+                  <th
+                    key={o.pokemon.slug}
+                    style={{ padding: 0, paddingBottom: 8 }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => poolIdx >= 0 && toggleBattle("opp", poolIdx)}
+                      className="flex flex-col items-center gap-1.5 rounded-lg transition-all"
+                      style={{
+                        width: CELL,
+                        background: isOppPicked
+                          ? "var(--color-danger-soft)"
+                          : "transparent",
+                        border: `1px solid ${isOppPicked ? "var(--color-danger)" : "transparent"}`,
+                        padding: "4px 2px",
+                        opacity: isOppPicked || !hasOppPicks ? 1 : 0.4,
+                      }}
+                      title={o.pokemon.name}
+                    >
+                      <span
+                        className="inline-flex items-center justify-center overflow-hidden rounded-full"
+                        style={{
+                          height: 32,
+                          width: 32,
+                          background: "var(--color-surface-2)",
+                          border: `1px solid ${isOppPicked ? "var(--color-danger)" : "var(--color-border-hi)"}`,
+                          boxShadow: isOppPicked
+                            ? `0 0 0 3px var(--color-danger-soft)`
+                            : "none",
+                        }}
+                      >
+                        <Image
+                          src={o.pokemon.spriteUrl}
+                          alt=""
+                          width={28}
+                          height={28}
+                          className="[image-rendering:pixelated]"
+                          unoptimized
+                        />
+                      </span>
+                      <span
+                        className={clsx(
+                          "text-[10px] truncate",
+                          isOppPicked ? "text-danger font-semibold" : "text-muted font-medium",
+                        )}
+                        style={{ maxWidth: CELL + 4, width: "100%", textAlign: "center" }}
+                      >
+                        {o.pokemon.name}
+                      </span>
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {matrix.map((row, ri) => (
-              <tr key={mine[ri].pokemon.slug}>
-                <th className="p-0">
-                  <div className="flex flex-col items-center gap-0.5 w-14">
-                    <Image
-                      src={mine[ri].pokemon.spriteUrl}
-                      alt={mine[ri].pokemon.name}
-                      width={40}
-                      height={40}
-                      className="h-10 w-10 [image-rendering:pixelated]"
-                      unoptimized
-                    />
-                    <span className="text-[10px] truncate max-w-full text-primary">
-                      {mine[ri].pokemon.name}
-                    </span>
-                  </div>
-                </th>
-                {row.map((cell, ci) => (
-                  <td
-                    key={`${ri}-${ci}`}
-                    className="p-0 text-center align-middle"
-                  >
-                    <div
-                      className="flex flex-col items-center justify-center h-14 w-14 rounded font-mono text-[11px] text-white"
-                      style={{ background: multiplierColor(cell.offense) }}
-                      title={`Offense ${multiplierLabel(cell.offense)} / Defense ${multiplierLabel(cell.defense)}`}
+            {matrix.map((row, ri) => {
+              const poolIdx = myIndices[ri];
+              const isMyPicked = poolIdx >= 0 && myBattle.includes(poolIdx);
+              const hasMyPicks = myBattle.length > 0;
+              return (
+                <tr key={mine[ri].pokemon.slug}>
+                  <th style={{ padding: 0, paddingRight: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => poolIdx >= 0 && toggleBattle("my", poolIdx)}
+                      className="flex items-center gap-2.5 rounded-lg transition-all text-left"
+                      style={{
+                        width: 150,
+                        background: isMyPicked
+                          ? "var(--color-primary-soft)"
+                          : "transparent",
+                        border: `1px solid ${isMyPicked ? "var(--color-primary)" : "transparent"}`,
+                        padding: "4px 6px",
+                        opacity: isMyPicked || !hasMyPicks ? 1 : 0.35,
+                      }}
                     >
-                      <span>{multiplierLabel(cell.offense)}</span>
-                      <span className="text-[9px] opacity-70">
-                        {multiplierLabel(cell.defense)}↓
+                      <span
+                        className="inline-flex items-center justify-center overflow-hidden rounded-full shrink-0"
+                        style={{
+                          height: 30,
+                          width: 30,
+                          background: "var(--color-surface-2)",
+                          border: `1px solid ${isMyPicked ? "var(--color-primary)" : "var(--color-border-hi)"}`,
+                          boxShadow: isMyPicked
+                            ? `0 0 0 3px var(--color-primary-soft)`
+                            : "none",
+                        }}
+                      >
+                        <Image
+                          src={mine[ri].pokemon.spriteUrl}
+                          alt=""
+                          width={26}
+                          height={26}
+                          className="[image-rendering:pixelated]"
+                          unoptimized
+                        />
                       </span>
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            ))}
+                      <span
+                        className={clsx(
+                          "text-xs font-semibold truncate flex-1 min-w-0",
+                          isMyPicked ? "text-primary" : "text-text",
+                        )}
+                      >
+                        {mine[ri].pokemon.name}
+                      </span>
+                    </button>
+                  </th>
+                  {row.map((cell, ci) => {
+                    const oppPoolIdx = oppIndices[ci];
+                    const isOppPicked = oppPoolIdx >= 0 && oppBattle.includes(oppPoolIdx);
+                    const rowH = isMyPicked;
+                    const colH = isOppPicked;
+                    const bothH = rowH && colH;
+                    const anyPicks = hasMyPicks || oppBattle.length > 0;
+                    const dim = anyPicks && !(rowH || colH);
+                    const hov = hoverCell?.[0] === ri && hoverCell?.[1] === ci;
+                    return (
+                      <td key={ci} style={{ padding: 0 }}>
+                        <div
+                          onMouseEnter={() => setHoverCell([ri, ci])}
+                          onMouseLeave={() => setHoverCell(null)}
+                          title={`Offense ${multiplierLabel(cell.offense)} / Defense ${multiplierLabel(cell.defense)}`}
+                          style={{
+                            width: CELL,
+                            height: CELL,
+                            borderRadius: 7,
+                            background: multiplierBgVar(cell.offense),
+                            borderStyle: "solid",
+                            borderWidth: bothH ? 2 : rowH || colH ? 1.5 : 1,
+                            borderColor: bothH
+                              ? "var(--color-primary)"
+                              : rowH
+                                ? "var(--color-primary)"
+                                : colH
+                                  ? "var(--color-danger)"
+                                  : hov
+                                    ? "var(--color-border-hi)"
+                                    : "var(--color-border)",
+                            boxShadow: bothH
+                              ? `0 0 0 2px var(--color-primary-soft), 0 2px 6px rgba(0,0,0,0.12)`
+                              : rowH
+                                ? `0 0 0 1px var(--color-primary-soft)`
+                                : colH
+                                  ? `0 0 0 1px var(--color-danger-soft)`
+                                  : "none",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            opacity: dim ? 0.25 : 1,
+                            transform: bothH ? "scale(1.04)" : "scale(1)",
+                            transition: "all 0.12s",
+                            position: "relative",
+                            zIndex: bothH ? 2 : rowH || colH ? 1 : 0,
+                          }}
+                        >
+                          <span
+                            className="font-mono font-bold"
+                            style={{
+                              fontSize: 14,
+                              color: multiplierTextVar(cell.offense),
+                              lineHeight: 1,
+                            }}
+                          >
+                            {multiplierLabel(cell.offense)}
+                          </span>
+                          <span
+                            className="font-mono"
+                            style={{
+                              fontSize: 10,
+                              color: "var(--color-muted)",
+                              marginTop: 4,
+                              lineHeight: 1,
+                            }}
+                          >
+                            {multiplierLabel(cell.defense)}
+                          </span>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-    </div>
+
+      {/* Legend + hover status */}
+      <div className="flex items-center gap-4 flex-wrap px-5 py-3 border-t border-border bg-surface-2/60">
+        <span className="font-mono text-[10px] text-muted tracking-[1px]">
+          LEGEND
+        </span>
+        {[0, 0.5, 1, 2, 4].map((v) => (
+          <div key={v} className="flex items-center gap-1.5">
+            <span
+              className="inline-block"
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 4,
+                background: multiplierBgVar(v),
+                border: "1px solid var(--color-border)",
+              }}
+            />
+            <span
+              className="font-mono text-[10px]"
+              style={{ color: multiplierTextVar(v) }}
+            >
+              {multiplierLabel(v)}
+            </span>
+          </div>
+        ))}
+        <span className="flex-1" />
+        <span
+          className="font-mono text-[10px] text-muted truncate"
+          style={{ maxWidth: "50%" }}
+        >
+          {hoverCell ? (
+            <>
+              <span className="text-primary">
+                {mine[hoverCell[0]]?.pokemon.name}
+              </span>
+              <span className="mx-2">vs</span>
+              <span className="text-danger">
+                {opps[hoverCell[1]]?.pokemon.name}
+              </span>
+              <span className="mx-2">·</span>
+              <span>
+                off {multiplierLabel(matrix[hoverCell[0]][hoverCell[1]].offense)}{" "}
+                / def{" "}
+                {multiplierLabel(matrix[hoverCell[0]][hoverCell[1]].defense)}
+              </span>
+            </>
+          ) : (
+            "hover a cell for details"
+          )}
+        </span>
+      </div>
+    </section>
   );
 }
+

@@ -10,7 +10,7 @@ import {
 } from "@/lib/analysis";
 import { effectiveness } from "@/lib/typeChart";
 import { TypePill } from "@/components/ui/TypePill";
-import { multiplierLabel, multiplierColor } from "@/lib/theme";
+import { multiplierLabel, multiplierBgVar, multiplierTextVar } from "@/lib/theme";
 import { useUsage } from "@/hooks/useUsage";
 import { useAppStore } from "@/stores/appStore";
 
@@ -82,8 +82,11 @@ export function StrengthsTab({ pokemon }: { pokemon: Pokemon }) {
                 />
                 <span className="flex-1 truncate text-xs">{m.opp.name}</span>
                 <span
-                  className="px-1.5 rounded font-mono text-[11px] text-white"
-                  style={{ background: multiplierColor(m.mult) }}
+                  className="px-1.5 rounded font-mono text-[11px]"
+                  style={{
+                    background: multiplierBgVar(m.mult),
+                    color: multiplierTextVar(m.mult),
+                  }}
                 >
                   {multiplierLabel(m.mult)}
                 </span>
