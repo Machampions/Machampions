@@ -14,6 +14,7 @@ import type {
 
 const POOL_SIZE = 6;
 const BATTLE_SIZE = 3;
+const MOVESET_SIZE = 4;
 
 type DrawerTab = "strengths" | "weaknesses" | "coverage";
 
@@ -28,6 +29,7 @@ interface AppState extends PersistedSlice {
   oppPool: (Pokemon | null)[];
   myBattle: number[];
   oppBattle: number[];
+  myMovesets: (string | null)[][];
 
   pokemonCache: Map<string, PokemonData>;
   usageCache: Map<string, UsageData>;
@@ -45,6 +47,12 @@ interface AppState extends PersistedSlice {
   setSlot: (side: "my" | "opp", idx: number, mon: Pokemon | null) => void;
   clearSide: (side: "my" | "opp") => void;
   resetAll: () => void;
+  setMyMovesetMove: (
+    teamIdx: number,
+    moveIdx: number,
+    moveName: string | null,
+  ) => void;
+  clearMyMoveset: (teamIdx: number) => void;
 
   toggleBattle: (side: "my" | "opp", idx: number) => void;
   setBattle: (side: "my" | "opp", battle: number[]) => void;
@@ -67,6 +75,11 @@ interface AppState extends PersistedSlice {
 const emptyPool = (): (Pokemon | null)[] =>
   Array.from({ length: POOL_SIZE }, () => null);
 
+const emptyMovesets = (): (string | null)[][] =>
+  Array.from({ length: POOL_SIZE }, () =>
+    Array.from({ length: MOVESET_SIZE }, () => null),
+  );
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -74,6 +87,7 @@ export const useAppStore = create<AppState>()(
       oppPool: emptyPool(),
       myBattle: [],
       oppBattle: [],
+      myMovesets: emptyMovesets(),
 
       pokemonCache: new Map(),
       usageCache: new Map(),
@@ -101,14 +115,30 @@ export const useAppStore = create<AppState>()(
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
         const pool = [...get()[key]];
         pool[idx] = mon;
+        const patch: Partial<AppState> = {};
+        if (side === "my" && mon === null) {
+          patch.myMovesets = get().myMovesets.map((set, i) =>
+            i === idx ? Array.from({ length: MOVESET_SIZE }, () => null) : set,
+          );
+        }
         const battle = get()[battleKey].filter((i) => pool[i] !== null);
-        set({ [key]: pool, [battleKey]: battle } as unknown as Partial<AppState>);
+        set({
+          ...patch,
+          [key]: pool,
+          [battleKey]: battle,
+        } as unknown as Partial<AppState>);
       },
 
       clearSide: (side) => {
         const key = side === "my" ? "myPool" : "oppPool";
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
-        set({ [key]: emptyPool(), [battleKey]: [] } as unknown as Partial<AppState>);
+        const patch: Partial<AppState> =
+          side === "my" ? { myMovesets: emptyMovesets() } : {};
+        set({
+          ...patch,
+          [key]: emptyPool(),
+          [battleKey]: [],
+        } as unknown as Partial<AppState>);
       },
 
       resetAll: () =>
@@ -117,9 +147,32 @@ export const useAppStore = create<AppState>()(
           oppPool: emptyPool(),
           myBattle: [],
           oppBattle: [],
+          myMovesets: emptyMovesets(),
           selectedSide: null,
           selectedSlot: null,
         }),
+
+      setMyMovesetMove: (teamIdx, moveIdx, moveName) => {
+        if (teamIdx < 0 || teamIdx >= POOL_SIZE) return;
+        if (moveIdx < 0 || moveIdx >= MOVESET_SIZE) return;
+        const myPool = get().myPool;
+        if (!myPool[teamIdx]) return;
+        const next = get().myMovesets.map((set, i) => {
+          if (i !== teamIdx) return set;
+          const updated = [...set];
+          updated[moveIdx] = moveName;
+          return updated;
+        });
+        set({ myMovesets: next });
+      },
+
+      clearMyMoveset: (teamIdx) => {
+        if (teamIdx < 0 || teamIdx >= POOL_SIZE) return;
+        const next = get().myMovesets.map((set, i) =>
+          i === teamIdx ? Array.from({ length: MOVESET_SIZE }, () => null) : set,
+        );
+        set({ myMovesets: next });
+      },
 
       toggleBattle: (side, idx) => {
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
@@ -194,6 +247,7 @@ export const useAppStore = create<AppState>()(
               slug: p.slug,
               types: p.types,
               spriteUrl: p.spriteUrl,
+              moves: p.moves,
             };
         });
         const poolKey = into === "my" ? "myPool" : "oppPool";
@@ -201,7 +255,10 @@ export const useAppStore = create<AppState>()(
         const validBattle = (team.battleSelection ?? []).filter(
           (i) => pool[i] !== null,
         );
+        const patch: Partial<AppState> =
+          into === "my" ? { myMovesets: emptyMovesets() } : {};
         set({
+          ...patch,
           [poolKey]: pool,
           [battleKey]: validBattle,
         } as unknown as Partial<AppState>);

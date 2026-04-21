@@ -72,6 +72,7 @@ export function PokemonSearch({
         slug: item.slug,
         types: [],
         spriteUrl: spriteUrl(item.id),
+        moves: [],
       });
       setQ("");
       setOpen(false);

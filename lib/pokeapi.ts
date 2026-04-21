@@ -1,9 +1,5 @@
-import type {
-  Pokemon,
-  PokemonData,
-  PokemonListItem,
-  TypeName,
-} from "./types";
+import { ALL_TYPES } from "./types";
+import type { Pokemon, PokemonData, PokemonListItem, PokemonMove, TypeName } from "./types";
 
 const BASE = "https://pokeapi.co/api/v2";
 const SPRITE_BASE =
@@ -62,6 +58,46 @@ interface DetailRaw {
       "official-artwork"?: { front_default: string | null };
     };
   };
+  moves: { move: { name: string; url: string } }[];
+}
+
+interface MoveDetailRaw {
+  type: { name: string };
+  damage_class: { name: string };
+}
+
+const moveCache = new Map<string, Promise<PokemonMove | null>>();
+
+async function fetchMoveDetail(
+  url: string,
+  signal?: AbortSignal,
+): Promise<PokemonMove | null> {
+  let inflight = moveCache.get(url);
+  if (!inflight) {
+    inflight = fetch(url, { signal, cache: "force-cache" })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const raw = (await res.json()) as MoveDetailRaw;
+        const type = raw.type?.name;
+        const damageClass = raw.damage_class?.name;
+        const validType = (ALL_TYPES as string[]).includes(type)
+          ? (type as TypeName)
+          : null;
+        if (!validType) return null;
+        if (!["physical", "special", "status"].includes(damageClass)) {
+          return null;
+        }
+        const parsedDamageClass = damageClass as PokemonMove["damageClass"];
+        return {
+          name: "",
+          type: validType,
+          damageClass: parsedDamageClass,
+        };
+      })
+      .catch(() => null);
+    moveCache.set(url, inflight);
+  }
+  return inflight;
 }
 
 export async function fetchPokemonDetail(
@@ -80,6 +116,22 @@ export async function fetchPokemonDetail(
   const stats = Object.fromEntries(
     raw.stats.map((s) => [s.stat.name, s.base_stat]),
   );
+  const uniqueMoveRows = Array.from(
+    new Map(raw.moves.map((m) => [m.move.name, m.move])).values(),
+  );
+  const moveDetails = await Promise.all(
+    uniqueMoveRows.map(async (row) => {
+      const detail = await fetchMoveDetail(row.url, signal);
+      if (!detail) return null;
+      return {
+        ...detail,
+        name: row.name,
+      } as PokemonMove;
+    }),
+  );
+  const moves = moveDetails
+    .filter((m): m is PokemonMove => !!m)
+    .sort((a, b) => a.name.localeCompare(b.name));
   return {
     id: raw.id,
     name: prettyName(raw.name),
@@ -97,6 +149,7 @@ export async function fetchPokemonDetail(
     abilities: raw.abilities.map((a) => a.ability.name),
     height: raw.height,
     weight: raw.weight,
+    moves,
   };
 }
 
@@ -107,5 +160,6 @@ export function toLightPokemon(data: PokemonData): Pokemon {
     slug: data.slug,
     types: data.types,
     spriteUrl: data.spriteUrl,
+    moves: data.moves,
   };
 }

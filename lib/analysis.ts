@@ -1,4 +1,4 @@
-import type { Pokemon, TypeName, UsageData } from "./types";
+import type { Pokemon, PokemonMove, TypeName, UsageData } from "./types";
 import { ALL_TYPES } from "./types";
 import {
   effectiveness,
@@ -9,9 +9,19 @@ import {
 export interface MonContext {
   pokemon: Pokemon;
   usage?: UsageData | null;
+  selectedMoves?: PokemonMove[];
+  slotIndex?: number;
 }
 
 export function attackingTypes(ctx: MonContext): TypeName[] {
+  if (ctx.selectedMoves && ctx.selectedMoves.length > 0) {
+    const fromMoves = ctx.selectedMoves
+      .filter((m) => m.damageClass !== "status")
+      .map((m) => m.type);
+    if (fromMoves.length > 0) {
+      return Array.from(new Set(fromMoves));
+    }
+  }
   const fromUsage = ctx.usage?.topMoves
     .map((m) => m.type)
     .filter((t): t is TypeName => !!t);

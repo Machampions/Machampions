@@ -39,12 +39,21 @@ export const ALL_TYPES: TypeName[] = [
   "fairy",
 ];
 
+export type MoveDamageClass = "physical" | "special" | "status";
+
+export interface PokemonMove {
+  name: string;
+  type: TypeName;
+  damageClass: MoveDamageClass;
+}
+
 export interface Pokemon {
   id: number;
   name: string;
   slug: string;
   types: TypeName[];
   spriteUrl: string;
+  moves: PokemonMove[];
 }
 
 export interface BaseStats {
@@ -67,6 +76,7 @@ export interface UsageMove {
   name: string;
   pct: number;
   type?: TypeName;
+  isDamaging?: boolean;
 }
 
 export interface UsageEntry {
