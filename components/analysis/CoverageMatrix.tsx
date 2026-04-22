@@ -7,7 +7,16 @@ import { multiplierBgVar, multiplierTextVar, multiplierLabel } from "@/lib/theme
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useAppStore } from "@/stores/appStore";
 
-const CELL = 54;
+const CELL = 58;
+
+function matrixMultiplierLabel(mult: number): string {
+  if (mult === 0.25) return "0.25";
+  if (mult === 0.5) return "0.5";
+  if (mult === 1) return "1";
+  if (mult === 2) return "2x";
+  if (mult === 4) return "4x";
+  return multiplierLabel(mult);
+}
 
 export function CoverageMatrix() {
   const { matrix, mine, opps } = useAnalysis();
@@ -160,7 +169,7 @@ export function CoverageMatrix() {
                         <div
                           onMouseEnter={() => setHoverCell([ri, ci])}
                           onMouseLeave={() => setHoverCell(null)}
-                          title={`Offense ${multiplierLabel(cell.offense)} / Defense ${multiplierLabel(cell.defense)}`}
+                          title={`Offense ${matrixMultiplierLabel(cell.offense)} / Defense ${matrixMultiplierLabel(cell.defense)}`}
                           style={{
                             width: CELL,
                             height: CELL,
@@ -203,7 +212,7 @@ export function CoverageMatrix() {
                               lineHeight: 1,
                             }}
                           >
-                            {multiplierLabel(cell.offense)}
+                            {matrixMultiplierLabel(cell.offense)}
                           </span>
                           <span
                             className="font-mono"
@@ -214,7 +223,7 @@ export function CoverageMatrix() {
                               lineHeight: 1,
                             }}
                           >
-                            {multiplierLabel(cell.defense)}
+                            {matrixMultiplierLabel(cell.defense)}
                           </span>
                         </div>
                       </td>
@@ -227,57 +236,6 @@ export function CoverageMatrix() {
         </table>
       </div>
 
-      {/* Legend + hover status */}
-      <div className="flex items-center gap-4 flex-wrap px-5 py-3 border-t border-border bg-surface-2/60">
-        <span className="font-mono text-[10px] text-muted tracking-[1px]">
-          LEGEND
-        </span>
-        {[0, 0.5, 1, 2, 4].map((v) => (
-          <div key={v} className="flex items-center gap-1.5">
-            <span
-              className="inline-block"
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: 4,
-                background: multiplierBgVar(v),
-                border: "1px solid var(--color-border)",
-              }}
-            />
-            <span
-              className="font-mono text-[10px]"
-              style={{ color: multiplierTextVar(v) }}
-            >
-              {multiplierLabel(v)}
-            </span>
-          </div>
-        ))}
-        <span className="flex-1" />
-        <span
-          className="font-mono text-[10px] text-muted truncate"
-          style={{ maxWidth: "50%" }}
-        >
-          {hoverCell ? (
-            <>
-              <span className="text-primary">
-                {mine[hoverCell[0]]?.pokemon.name}
-              </span>
-              <span className="mx-2">vs</span>
-              <span className="text-danger">
-                {opps[hoverCell[1]]?.pokemon.name}
-              </span>
-              <span className="mx-2">·</span>
-              <span>
-                off {multiplierLabel(matrix[hoverCell[0]][hoverCell[1]].offense)}{" "}
-                / def{" "}
-                {multiplierLabel(matrix[hoverCell[0]][hoverCell[1]].defense)}
-              </span>
-            </>
-          ) : (
-            "hover a cell for details"
-          )}
-        </span>
-      </div>
     </section>
   );
 }
