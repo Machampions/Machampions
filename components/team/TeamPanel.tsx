@@ -31,6 +31,7 @@ export function TeamPanel({
     side === "my" ? s.myBattle : s.oppBattle,
   );
   const setSlot = useAppStore((s) => s.setSlot);
+  const clearSide = useAppStore((s) => s.clearSide);
   const toggleBattle = useAppStore((s) => s.toggleBattle);
   const openDrawer = useAppStore((s) => s.openDrawer);
   const myMovesets = useAppStore((s) => s.myMovesets);
@@ -61,17 +62,27 @@ export function TeamPanel({
   return (
     <section className="flex flex-col rounded-[10px] border border-border bg-surface">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h3
-          className={clsx(
-            "font-mono text-[10px] font-semibold uppercase tracking-[1.5px]",
-            accentText,
-          )}
+        <div className="flex items-center gap-2">
+          <h3
+            className={clsx(
+              "font-mono text-[10px] font-semibold uppercase tracking-[1.5px]",
+              accentText,
+            )}
+          >
+            {title}
+          </h3>
+          <span className="font-mono text-[10px] text-muted">
+            <span className={accentText}>{filled}</span>/{POOL_SLOTS}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => clearSide(side)}
+          disabled={filled === 0}
+          className="rounded border border-border px-2 py-1 font-mono text-[10px] uppercase tracking-[1px] text-muted transition-colors hover:border-border-hi hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {title}
-        </h3>
-        <span className="font-mono text-[10px] text-muted">
-          <span className={accentText}>{filled}</span>/{POOL_SLOTS}
-        </span>
+          Clear All
+        </button>
       </header>
 
       <div className="flex flex-col gap-2 p-[10px]">

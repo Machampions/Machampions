@@ -58,7 +58,7 @@ function matches(item: PokemonListItem, q: string): boolean {
 export function AddMonModal({ side, onClose }: Props) {
   const suggestions = usePoolSuggestions(side);
   const pool = useAppStore((s) => (side === "my" ? s.myPool : s.oppPool));
-  const setSlot = useAppStore((s) => s.setSlot);
+  const addToPool = useAppStore((s) => s.addToPool);
   const setApiStatus = useAppStore((s) => s.setApiStatus);
   const pokemonCache = useAppStore((s) => s.pokemonCache);
 
@@ -68,13 +68,21 @@ export function AddMonModal({ side, onClose }: Props) {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const title = side === "my" ? "my pool" : "opponent pool";
   const accentClass = side === "my" ? "text-primary" : "text-danger";
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,11 +153,21 @@ export function AddMonModal({ side, onClose }: Props) {
       onClose();
       return;
     }
+    const flashNotice = (msg: string) => {
+      if (noticeTimer.current) clearTimeout(noticeTimer.current);
+      setNotice(msg);
+      noticeTimer.current = setTimeout(() => setNotice(null), 1400);
+    };
     setBusy(true);
     try {
       const data = await ensurePokemonDetail(row.slug);
       const mon = toLightPokemon(data);
-      setSlot(side, idx, mon);
+      const result = addToPool(side, mon);
+      if (!result.ok) {
+        if (result.reason === "duplicate") flashNotice("Already in pool");
+        return;
+      }
+      onClose();
     } catch {
       const fallback: Pokemon = {
         id: row.spriteId ?? 0,
@@ -159,10 +177,14 @@ export function AddMonModal({ side, onClose }: Props) {
         spriteUrl: row.spriteId ? spriteUrl(row.spriteId) : "",
         moves: [],
       };
-      setSlot(side, idx, fallback);
+      const result = addToPool(side, fallback);
+      if (!result.ok) {
+        if (result.reason === "duplicate") flashNotice("Already in pool");
+        return;
+      }
+      onClose();
     } finally {
       setBusy(false);
-      onClose();
     }
   }
 
@@ -211,6 +233,9 @@ export function AddMonModal({ side, onClose }: Props) {
           <p className="text-[11px] text-danger">
             PokeAPI unreachable — check your connection.
           </p>
+        )}
+        {notice && (
+          <p className="text-[11px] text-danger font-medium">{notice}</p>
         )}
 
         <div className="flex max-h-[320px] flex-col gap-[6px] overflow-auto">

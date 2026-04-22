@@ -51,6 +51,10 @@ interface AppState extends PersistedSlice {
   setTeamSize: (n: TeamSize) => void;
 
   setSlot: (side: "my" | "opp", idx: number, mon: Pokemon | null) => void;
+  addToPool: (
+    side: "my" | "opp",
+    mon: Pokemon,
+  ) => { ok: true; index: number } | { ok: false; reason: "duplicate" | "full" };
   clearSide: (side: "my" | "opp") => void;
   resetAll: () => void;
   setMyMovesetMove: (
@@ -162,6 +166,24 @@ export const useAppStore = create<AppState>()(
           [key]: pool,
           [battleKey]: battle,
         } as unknown as Partial<AppState>);
+      },
+      addToPool: (side, mon) => {
+        const key = side === "my" ? "myPool" : "oppPool";
+        const pool = get()[key];
+        const monName = mon.name.trim().toLowerCase();
+        const duplicate = pool.some((p) => {
+          if (!p) return false;
+          if (p.id > 0 && mon.id > 0) return p.id === mon.id;
+          if (p.slug && mon.slug) return p.slug.toLowerCase() === mon.slug.toLowerCase();
+          return p.name.trim().toLowerCase() === monName;
+        });
+        if (duplicate) return { ok: false, reason: "duplicate" } as const;
+        const idx = pool.findIndex((p) => p === null);
+        if (idx === -1 || idx >= POOL_SIZE) return { ok: false, reason: "full" } as const;
+        const next = [...pool];
+        next[idx] = mon;
+        set({ [key]: next } as unknown as Partial<AppState>);
+        return { ok: true, index: idx } as const;
       },
 
       clearSide: (side) => {
