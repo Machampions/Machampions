@@ -76,27 +76,14 @@ export function CoverageMatrix() {
                       }}
                       title={o.pokemon.name}
                     >
-                      <span
-                        className="inline-flex items-center justify-center overflow-hidden rounded-full"
-                        style={{
-                          height: 32,
-                          width: 32,
-                          background: "var(--color-surface-2)",
-                          border: `1px solid ${isOppPicked ? "var(--color-danger)" : "var(--color-border-hi)"}`,
-                          boxShadow: isOppPicked
-                            ? `0 0 0 3px var(--color-danger-soft)`
-                            : "none",
-                        }}
-                      >
-                        <Image
-                          src={o.pokemon.spriteUrl}
-                          alt=""
-                          width={28}
-                          height={28}
-                          className="[image-rendering:pixelated]"
-                          unoptimized
-                        />
-                      </span>
+                      <Image
+                        src={o.pokemon.spriteUrl}
+                        alt=""
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 [image-rendering:pixelated]"
+                        unoptimized
+                      />
                       <span
                         className={clsx(
                           "text-[10px] truncate",
@@ -134,27 +121,14 @@ export function CoverageMatrix() {
                         opacity: isMyPicked || !hasMyPicks ? 1 : 0.35,
                       }}
                     >
-                      <span
-                        className="inline-flex items-center justify-center overflow-hidden rounded-full shrink-0"
-                        style={{
-                          height: 30,
-                          width: 30,
-                          background: "var(--color-surface-2)",
-                          border: `1px solid ${isMyPicked ? "var(--color-primary)" : "var(--color-border-hi)"}`,
-                          boxShadow: isMyPicked
-                            ? `0 0 0 3px var(--color-primary-soft)`
-                            : "none",
-                        }}
-                      >
-                        <Image
-                          src={mine[ri].pokemon.spriteUrl}
-                          alt=""
-                          width={26}
-                          height={26}
-                          className="[image-rendering:pixelated]"
-                          unoptimized
-                        />
-                      </span>
+                      <Image
+                        src={mine[ri].pokemon.spriteUrl}
+                        alt=""
+                        width={42}
+                        height={42}
+                        className="h-[42px] w-[42px] shrink-0 [image-rendering:pixelated]"
+                        unoptimized
+                      />
                       <span
                         className={clsx(
                           "text-xs font-semibold truncate flex-1 min-w-0",
@@ -168,11 +142,18 @@ export function CoverageMatrix() {
                   {row.map((cell, ci) => {
                     const oppPoolIdx = oppIndices[ci];
                     const isOppPicked = oppPoolIdx >= 0 && oppBattle.includes(oppPoolIdx);
+                    const hasOppPicks = oppBattle.length > 0;
                     const rowH = isMyPicked;
                     const colH = isOppPicked;
+                    const bothSidesHavePicks = hasMyPicks && hasOppPicks;
                     const bothH = rowH && colH;
-                    const anyPicks = hasMyPicks || oppBattle.length > 0;
-                    const dim = anyPicks && !(rowH || colH);
+                    const anyPicks = hasMyPicks || hasOppPicks;
+                    // When both sides have picks, only the intersection is highlighted.
+                    // Otherwise, fall back to single-axis highlighting.
+                    const highlighted = bothSidesHavePicks
+                      ? bothH
+                      : rowH || colH;
+                    const dim = anyPicks && !highlighted;
                     const hov = hoverCell?.[0] === ri && hoverCell?.[1] === ci;
                     return (
                       <td key={ci} style={{ padding: 0 }}>

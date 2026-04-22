@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import Image from "next/image";
+import { useState } from "react";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { useAppStore } from "@/stores/appStore";
 import type { LineupRecommendation } from "@/lib/analysis";
@@ -15,6 +16,7 @@ export function RecommendationPanel({ onHover }: Props) {
   const myPool = useAppStore((s) => s.myPool);
   const oppPool = useAppStore((s) => s.oppPool);
   const myBattle = useAppStore((s) => s.myBattle);
+  const oppBattle = useAppStore((s) => s.oppBattle);
   const setBattle = useAppStore((s) => s.setBattle);
 
   const myCount = myPool.filter((p) => p).length;
@@ -51,7 +53,9 @@ export function RecommendationPanel({ onHover }: Props) {
           </p>
         )}
         {picks.map((rec, i) => {
-          const isApplied = sameSet(rec.myIndices, myBattle);
+          const isApplied =
+            sameSet(rec.myIndices, myBattle) &&
+            sameSet(rec.predictedOppIndices, oppBattle);
           return (
             <LineupRow
               key={rec.myIndices.join("-")}
@@ -62,7 +66,15 @@ export function RecommendationPanel({ onHover }: Props) {
                 onHover?.({ mine: rec.myIndices, opp: rec.predictedOppIndices })
               }
               onLeave={() => onHover?.(null)}
-              onClick={() => setBattle("my", isApplied ? [] : rec.myIndices)}
+              onClick={() => {
+                if (isApplied) {
+                  setBattle("my", []);
+                  setBattle("opp", []);
+                } else {
+                  setBattle("my", rec.myIndices);
+                  setBattle("opp", rec.predictedOppIndices);
+                }
+              }}
             />
           );
         })}
@@ -86,10 +98,18 @@ function LineupRow({
   onLeave: () => void;
   onClick: () => void;
 }) {
+  const [hovered, setHovered] = useState(false);
+  const highlighted = applied || hovered;
   return (
     <div
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
+      onMouseEnter={() => {
+        setHovered(true);
+        onEnter();
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        onLeave();
+      }}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -103,10 +123,12 @@ function LineupRow({
         "group rounded-[10px] border p-3 cursor-pointer transition-all flex flex-col gap-[10px]",
       )}
       style={{
-        background: applied
+        background: highlighted
           ? "var(--color-primary-soft)"
           : "var(--color-surface-2)",
-        borderColor: applied ? "var(--color-primary)" : "var(--color-border)",
+        borderColor: highlighted
+          ? "var(--color-primary)"
+          : "var(--color-border)",
         borderWidth: 1.5,
       }}
     >
@@ -114,7 +136,7 @@ function LineupRow({
         <div
           className={clsx(
             "font-mono text-[10px] font-semibold",
-            applied ? "text-primary" : "text-muted",
+            highlighted ? "text-primary" : "text-muted",
           )}
         >
           #0{index + 1}
@@ -165,32 +187,19 @@ function LineupRow({
 
 function TokenSmall({
   mon,
-  tone,
 }: {
   mon: { name: string; slug: string; spriteUrl: string };
-  tone: "primary" | "danger";
+  tone?: "primary" | "danger";
 }) {
-  const accent =
-    tone === "danger" ? "var(--color-danger)" : "var(--color-primary)";
   return (
-    <span
+    <Image
+      src={mon.spriteUrl}
+      alt={mon.name}
       title={mon.name}
-      className="inline-flex items-center justify-center overflow-hidden rounded-full"
-      style={{
-        height: 30,
-        width: 30,
-        background: "var(--color-surface)",
-        border: `1px solid ${accent}`,
-      }}
-    >
-      <Image
-        src={mon.spriteUrl}
-        alt={mon.name}
-        width={26}
-        height={26}
-        unoptimized
-        className="[image-rendering:pixelated]"
-      />
-    </span>
+      width={40}
+      height={40}
+      unoptimized
+      className="h-10 w-10 shrink-0 [image-rendering:pixelated]"
+    />
   );
 }

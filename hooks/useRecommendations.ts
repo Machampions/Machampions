@@ -7,6 +7,7 @@ import { ensureUsage } from "./useUsage";
 
 export function useRecommendations(): { picks: LineupRecommendation[] } {
   const format = useAppStore((s) => s.format);
+  const teamSize = useAppStore((s) => s.teamSize);
   const myPool = useAppStore((s) => s.myPool);
   const oppPool = useAppStore((s) => s.oppPool);
   const usageCache = useAppStore((s) => s.usageCache);
@@ -21,7 +22,16 @@ export function useRecommendations(): { picks: LineupRecommendation[] } {
   }, [myPool, oppPool, format]);
 
   return useMemo(
-    () => ({ picks: recommendLineups(myPool, oppPool, usageCache, format, 3) }),
-    [myPool, oppPool, usageCache, format],
+    () => ({
+      picks: recommendLineups(
+        myPool,
+        oppPool,
+        usageCache,
+        format,
+        teamSize,
+        teamSize === 4 ? 4 : 3,
+      ),
+    }),
+    [myPool, oppPool, usageCache, format, teamSize],
   );
 }

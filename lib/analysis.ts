@@ -223,6 +223,7 @@ export function recommendLineups(
   oppPool: (Pokemon | null)[],
   usageCache: Map<string, UsageData>,
   format: string,
+  lineupSize = 3,
   limit = 3,
 ): LineupRecommendation[] {
   const myFilled = myPool
@@ -232,15 +233,15 @@ export function recommendLineups(
     .map((p, i) => (p ? i : -1))
     .filter((i) => i >= 0);
 
-  if (myFilled.length < 3 || oppFilled.length < 3) return [];
+  if (myFilled.length < lineupSize || oppFilled.length < lineupSize) return [];
 
   const ctx = (p: Pokemon): MonContext => ({
     pokemon: p,
     usage: usageCache.get(`${format}:${p.slug}`) ?? null,
   });
 
-  const myCombos = combos(myFilled, 3);
-  const oppCombos = combos(oppFilled, 3);
+  const myCombos = combos(myFilled, lineupSize);
+  const oppCombos = combos(oppFilled, lineupSize);
 
   const results: LineupRecommendation[] = myCombos.map((myIdx) => {
     const mine = myIdx.map((i) => ctx(myPool[i]!));

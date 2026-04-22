@@ -17,21 +17,6 @@
   --color-gold: #e8c46a;
   --color-success: #5bc28f;
 
-  /* Matrix multiplier cell colors */
-  --color-m-zero: #3a2a2e;
-  --color-m-zero-text: #e0c8c8;
-  --color-m-half: #2d4b6e;
-  --color-m-half-text: #d8e6f5;
-  --color-m-one: #1d2028;
-  --color-m-one-text: #7a7f8d;
-  --color-m-two: #7a3528;
-  --color-m-two-text: #ffe0d6;
-  --color-m-four: #b84436;
-  --color-m-four-text: #fff4f0;
-
-  --color-chip-bg: #22262f;
-  --color-chip-text: #c4c8d4;
-
   --color-type-normal: #a8a77a;
   --color-type-fire: #ee8130;
   --color-type-water: #6390f0;
@@ -55,6 +40,25 @@
   --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Matrix + chip tokens — kept outside @theme because Tailwind v4
+   tree-shakes @theme tokens that no utility class consumes, and these
+   are read via raw var() from JS (CoverageMatrix, TypeChip, etc.). */
+:root {
+  --color-m-zero: #5e2c38;
+  --color-m-zero-text: #f4c9c9;
+  --color-m-half: #1c4f92;
+  --color-m-half-text: #dfeeff;
+  --color-m-one: #22262f;
+  --color-m-one-text: #9ea3b0;
+  --color-m-two: #a84326;
+  --color-m-two-text: #ffe5d8;
+  --color-m-four: #d84028;
+  --color-m-four-text: #ffffff;
+
+  --color-chip-bg: #22262f;
+  --color-chip-text: #c4c8d4;
+}
+
 [data-theme="light"] {
   --color-bg: #f5f4f0;
   --color-surface: #ffffff;
@@ -71,15 +75,15 @@
   --color-gold: #b88a1a;
   --color-success: #228a57;
 
-  --color-m-zero: #b9a8a8;
-  --color-m-zero-text: #3a2525;
-  --color-m-half: #b8d0e8;
-  --color-m-half-text: #1a3450;
-  --color-m-one: #ecebe3;
-  --color-m-one-text: #6a6960;
-  --color-m-two: #f0a896;
-  --color-m-two-text: #4a1a10;
-  --color-m-four: #d76a56;
+  --color-m-zero: #e07e7e;
+  --color-m-zero-text: #3a0b0b;
+  --color-m-half: #65a8e6;
+  --color-m-half-text: #0a2540;
+  --color-m-one: #eceae0;
+  --color-m-one-text: #5a5948;
+  --color-m-two: #f37a52;
+  --color-m-two-text: #3a0a00;
+  --color-m-four: #d63a1a;
   --color-m-four-text: #ffffff;
 
   --color-chip-bg: #eeece4;

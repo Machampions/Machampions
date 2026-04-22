@@ -21,28 +21,24 @@ export function useTopList(format: string): {
   useEffect(() => {
     if (cached) return;
     let cancelled = false;
-    const ctrl = new AbortController();
     let p = inflight.get(format);
     if (!p) {
-      p = fetchTopList(format, ctrl.signal);
+      p = fetchTopList(format).finally(() => {
+        inflight.delete(format);
+      });
       inflight.set(format, p);
     }
     p.then((data) => {
       if (cancelled) return;
       cacheTopList(data);
       setApiStatus({ pikalytics: "ok" });
-    })
-      .catch((e: Error) => {
-        if (cancelled || e.name === "AbortError") return;
-        setError(e);
-        setApiStatus({ pikalytics: "degraded" });
-      })
-      .finally(() => {
-        inflight.delete(format);
-      });
+    }).catch((e: Error) => {
+      if (cancelled || e.name === "AbortError") return;
+      setError(e);
+      setApiStatus({ pikalytics: "degraded" });
+    });
     return () => {
       cancelled = true;
-      ctrl.abort();
     };
   }, [format, cached, cacheTopList, setApiStatus]);
 

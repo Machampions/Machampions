@@ -16,7 +16,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Champions Drafter",
+  title: "Machampion",
   description:
     "Pokémon Champions draft cockpit — meta-aware opponent prediction, coverage analysis, and next-pick recommendations.",
 };
@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="dark"
+      data-theme="light"
       className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

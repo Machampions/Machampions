@@ -13,15 +13,17 @@ import type {
 } from "@/lib/types";
 
 const POOL_SIZE = 6;
-const BATTLE_SIZE = 3;
+const MAX_BATTLE_SIZE = 4;
 const MOVESET_SIZE = 4;
 
 type DrawerTab = "strengths" | "weaknesses" | "coverage";
+type TeamSize = 3 | 4;
 
 interface PersistedSlice {
   savedTeams: SavedTeam[];
   theme: Theme;
   format: string;
+  teamSize: TeamSize;
 }
 
 interface AppState extends PersistedSlice {
@@ -45,6 +47,7 @@ interface AppState extends PersistedSlice {
 
   setTheme: (t: Theme) => void;
   setFormat: (f: string) => void;
+  setTeamSize: (n: TeamSize) => void;
 
   setSlot: (side: "my" | "opp", idx: number, mon: Pokemon | null) => void;
   clearSide: (side: "my" | "opp") => void;
@@ -115,8 +118,9 @@ export const useAppStore = create<AppState>()(
       selectedSlot: null,
 
       drawerTab: "strengths",
-      theme: "dark",
+      theme: "light",
       format: "championspreview",
+      teamSize: 3,
       apiStatus: { pokeapi: "unknown", pikalytics: "unknown" },
 
       setTheme: (t) => {
@@ -126,6 +130,13 @@ export const useAppStore = create<AppState>()(
         }
       },
       setFormat: (f) => set({ format: f }),
+      setTeamSize: (n) => {
+        set({
+          teamSize: n,
+          myBattle: get().myBattle.slice(0, n),
+          oppBattle: get().oppBattle.slice(0, n),
+        });
+      },
 
       setSlot: (side, idx, mon) => {
         const key = side === "my" ? "myPool" : "oppPool";
@@ -253,11 +264,12 @@ export const useAppStore = create<AppState>()(
         const poolKey = side === "my" ? "myPool" : "oppPool";
         const pool = get()[poolKey];
         if (pool[idx] == null) return;
+        const cap = get().teamSize;
         const current = get()[battleKey];
         let next: number[];
         if (current.includes(idx)) {
           next = current.filter((i) => i !== idx);
-        } else if (current.length < BATTLE_SIZE) {
+        } else if (current.length < cap) {
           next = [...current, idx];
         } else {
           next = [...current.slice(1), idx];
@@ -267,7 +279,8 @@ export const useAppStore = create<AppState>()(
 
       setBattle: (side, battle) => {
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
-        set({ [battleKey]: battle.slice(0, BATTLE_SIZE) } as unknown as Partial<AppState>);
+        const cap = get().teamSize;
+        set({ [battleKey]: battle.slice(0, cap) } as unknown as Partial<AppState>);
       },
 
       openDrawer: (side, idx) => set({ selectedSide: side, selectedSlot: idx }),
@@ -386,10 +399,11 @@ export const useAppStore = create<AppState>()(
         savedTeams: state.savedTeams,
         theme: state.theme,
         format: state.format,
+        teamSize: state.teamSize,
       }),
     },
   ),
 );
 
 export const POOL_SLOTS = POOL_SIZE;
-export const BATTLE_SLOTS = BATTLE_SIZE;
+export const MAX_BATTLE_SLOTS = MAX_BATTLE_SIZE;

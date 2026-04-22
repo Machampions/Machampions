@@ -35,8 +35,7 @@ export function usePoolSuggestions(side: "my" | "opp"): Suggestion[] {
   return useMemo(() => {
     if (!topList) return [];
     const usedSlugs = new Set<string>();
-    oppPool.forEach((p) => p && usedSlugs.add(p.slug));
-    myPool.forEach((p) => p && usedSlugs.add(p.slug));
+    primaryPool.forEach((p) => p && usedSlugs.add(p.slug));
 
     const teammateBoost = new Map<string, { pct: number; from: string }>();
     primaryPool.forEach((p) => {

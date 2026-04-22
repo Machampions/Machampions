@@ -1,39 +1,37 @@
 "use client";
 
 import clsx from "clsx";
-import { Eraser, X } from "lucide-react";
+import { X } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { PokemonSearch } from "./PokemonSearch";
 import { MovesetPopover } from "./MovesetPopover";
 import { TypePill } from "@/components/ui/TypePill";
-import { POOL_SLOTS, BATTLE_SLOTS, useAppStore } from "@/stores/appStore";
+import { POOL_SLOTS, useAppStore } from "@/stores/appStore";
 import type { Pokemon } from "@/lib/types";
-import type { Suggestion } from "@/hooks/useOpponentSuggestions";
 
 interface Props {
   side: "my" | "opp";
   title: string;
   accent?: "primary" | "danger";
-  suggestions?: Suggestion[];
   highlightedIndices?: number[] | null;
+  onAdd: () => void;
+  onImport?: () => void;
 }
 
 export function TeamPanel({
   side,
   title,
   accent = "primary",
-  suggestions,
   highlightedIndices,
+  onAdd,
+  onImport,
 }: Props) {
   const pool = useAppStore((s) => (side === "my" ? s.myPool : s.oppPool));
   const battle = useAppStore((s) =>
     side === "my" ? s.myBattle : s.oppBattle,
   );
   const setSlot = useAppStore((s) => s.setSlot);
-  const clearSide = useAppStore((s) => s.clearSide);
   const toggleBattle = useAppStore((s) => s.toggleBattle);
-  const setBattle = useAppStore((s) => s.setBattle);
   const openDrawer = useAppStore((s) => s.openDrawer);
   const myMovesets = useAppStore((s) => s.myMovesets);
   const setMyMovesetMove = useAppStore((s) => s.setMyMovesetMove);
@@ -54,17 +52,11 @@ export function TeamPanel({
     movesetTimer.current = setTimeout(() => setMovesetSlot(null), 150);
   }
 
-  function addPokemon(mon: Pokemon) {
-    const idx = pool.findIndex((p) => p === null);
-    if (idx === -1) return;
-    setSlot(side, idx, mon);
-  }
-
   const accentText = accent === "danger" ? "text-danger" : "text-primary";
 
   return (
-    <section className="rounded-[10px] border border-border bg-surface flex flex-col">
-      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+    <section className="flex flex-col rounded-[10px] border border-border bg-surface">
+      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <h3
           className={clsx(
             "font-mono text-[10px] font-semibold uppercase tracking-[1.5px]",
@@ -79,22 +71,14 @@ export function TeamPanel({
       </header>
 
       <div className="flex flex-col gap-2 p-[10px]">
-        {canAdd && (
-          <div className="relative z-30 rounded-[10px] border border-border bg-surface-2 p-2">
-            <PokemonSearch
-              onPick={addPokemon}
-              placeholder={`Add to ${title}…`}
-              suggestions={suggestions}
-            />
-          </div>
-        )}
-
         {pool.map((mon, i) => {
           if (!mon) return null;
           const isBattle = battle.includes(i);
           const isHighlighted = !!highlightedIndices?.includes(i);
           const dim =
-            !!highlightedIndices && highlightedIndices.length > 0 && !isHighlighted;
+            !!highlightedIndices &&
+            highlightedIndices.length > 0 &&
+            !isHighlighted;
           const showMoveset = side === "my" && movesetSlot === i;
 
           return (
@@ -119,9 +103,7 @@ export function TeamPanel({
                 <MovesetPopover
                   pokemon={mon}
                   slotIndex={i}
-                  selected={
-                    myMovesets[i] ?? [null, null, null, null]
-                  }
+                  selected={myMovesets[i] ?? [null, null, null, null]}
                   onSelect={(moveIdx, moveName) =>
                     setMyMovesetMove(i, moveIdx, moveName)
                   }
@@ -132,7 +114,7 @@ export function TeamPanel({
                     position: "absolute",
                     left: "calc(100% + 10px)",
                     top: 0,
-                    width: 320,
+                    width: 280,
                     zIndex: 60,
                   }}
                 />
@@ -141,36 +123,35 @@ export function TeamPanel({
           );
         })}
 
-        {filled > 0 && (
-          <div className="mt-1 flex items-center justify-between gap-2 px-1 pt-1 font-mono text-[10px] text-muted">
-            <span>
-              BATTLE{" "}
-              <span className={accentText}>{battle.length}</span>/{BATTLE_SLOTS}
-              {battle.length === 0 && (
-                <span className="ml-2 text-dim">
-                  (no picks — analysing all {filled})
-                </span>
-              )}
-            </span>
-            {battle.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setBattle(side, [])}
-                className="hover:text-danger"
-              >
-                Clear battle
-              </button>
-            )}
-          </div>
-        )}
-
-        {filled > 0 && (
+        {canAdd && (
           <button
             type="button"
-            onClick={() => clearSide(side)}
-            className="flex items-center justify-center gap-1 text-[11px] font-mono text-muted hover:text-danger"
+            onClick={onAdd}
+            className="mt-[2px] flex w-full items-center justify-center gap-[6px] rounded-[10px] border border-dashed border-border-hi bg-transparent p-[10px] text-[12px] text-muted hover:text-text hover:border-primary transition-colors"
           >
-            <Eraser size={11} /> Clear pool
+            <span className="text-[14px] leading-none">+</span> Add creature
+          </button>
+        )}
+        {onImport && (
+          <button
+            type="button"
+            onClick={onImport}
+            className="flex w-full items-center justify-center gap-[6px] rounded-[10px] border border-border bg-transparent p-[10px] text-[12px] text-muted hover:text-text hover:border-border-hi transition-colors"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M8 1v10M4 7l4 4 4-4M2 14h12" />
+            </svg>
+            Import team
           </button>
         )}
       </div>
@@ -214,22 +195,30 @@ function PoolCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onToggleBattle}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggleBattle();
+        }
+      }}
       className={clsx(
-        "group relative flex items-center gap-[10px] rounded-[10px] border p-[10px] cursor-pointer transition-all",
-        "min-w-0",
+        "group relative flex min-w-0 cursor-pointer items-center gap-[10px] rounded-[10px] p-[10px] transition-all",
       )}
       style={{
         background: selected ? accentSoft : "var(--color-surface-2)",
+        borderStyle: "solid",
+        borderWidth: 1.5,
         borderColor: selected
           ? accentColor
           : hovered
             ? "var(--color-border-hi)"
             : "var(--color-border)",
-        borderWidth: 1.5,
         opacity: dim ? 0.45 : 1,
       }}
     >
-      {/* Sprite token */}
+      {/* Sprite */}
       <button
         type="button"
         onClick={(e) => {
@@ -237,46 +226,35 @@ function PoolCard({
           onOpen();
         }}
         aria-label={`Details for ${mon.name}`}
-        className="shrink-0"
+        className="flex h-14 w-14 shrink-0 items-center justify-center"
       >
-        <div
-          className="h-10 w-10 rounded-full flex items-center justify-center overflow-hidden"
-          style={{
-            background: "var(--color-surface-2)",
-            border: `1px solid ${selected ? accentColor : "var(--color-border-hi)"}`,
-            boxShadow: selected ? `0 0 0 3px ${accentSoft}` : "none",
-          }}
-        >
-          {mon.spriteUrl ? (
-            <Image
-              src={mon.spriteUrl}
-              alt={mon.name}
-              width={36}
-              height={36}
-              unoptimized
-              className="h-9 w-9 [image-rendering:pixelated]"
-            />
-          ) : (
-            <span className="text-xs font-semibold uppercase text-muted">
-              {mon.name.slice(0, 2)}
-            </span>
-          )}
-        </div>
+        {mon.spriteUrl ? (
+          <Image
+            src={mon.spriteUrl}
+            alt={mon.name}
+            width={56}
+            height={56}
+            unoptimized
+            className="h-14 w-14 [image-rendering:pixelated]"
+          />
+        ) : (
+          <span className="text-sm font-semibold uppercase text-muted">
+            {mon.name.slice(0, 2)}
+          </span>
+        )}
       </button>
 
-      {/* Name + types */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-semibold leading-tight truncate">
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="truncate text-[13px] font-semibold leading-tight">
           {mon.name}
         </div>
-        <div className="mt-1 flex gap-1 flex-wrap">
+        <div className="mt-1 flex flex-wrap gap-1">
           {mon.types.map((t) => (
             <TypePill key={t} type={t} size="xs" />
           ))}
         </div>
       </div>
 
-      {/* Trailing affordance: X on hover, else pick number if battle */}
       {hovered ? (
         <button
           type="button"
@@ -285,7 +263,7 @@ function PoolCard({
             onRemove();
           }}
           aria-label={`Remove ${mon.name}`}
-          className="shrink-0 h-[22px] w-[22px] inline-flex items-center justify-center rounded-full border hover:bg-danger hover:text-white hover:border-danger"
+          className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border bg-transparent hover:border-danger hover:bg-danger hover:text-white"
           style={{
             borderColor: "var(--color-border-hi)",
             color: "var(--color-muted)",
@@ -296,7 +274,7 @@ function PoolCard({
       ) : (
         pickNumber !== null && (
           <span
-            className="shrink-0 inline-flex items-center justify-center font-mono font-bold text-[11px] text-white"
+            className="inline-flex shrink-0 items-center justify-center font-mono text-[11px] font-bold leading-none text-white"
             style={{
               height: 20,
               width: 20,
