@@ -638,8 +638,19 @@ function toCanonicalName(originalName: string, slug: string): string {
   return originalName;
 }
 
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/[_\s]+/g, "-");
+export function normalizePokemonLookupToken(name: string): string {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/[^a-z0-9-]+/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return normalized
+    .replace(/\bhisuian\b/g, "hisui")
+    .replace(/\balolan\b/g, "alola")
+    .replace(/\bgalarian\b/g, "galar")
+    .replace(/\bpaldean\b/g, "paldea");
 }
 
 function artworkUrlForSlug(slug: string): string {
@@ -665,13 +676,13 @@ const POKEMON_BY_SLUG = new Map(CHAMPIONS_LEGAL_LIST.map((entry) => [entry.slug,
 const POKEMON_LOOKUP = new Map<string, ChampionsPokemonEntry>();
 
 for (const entry of CHAMPIONS_LEGAL_LIST) {
-  POKEMON_LOOKUP.set(normalizeName(entry.name), entry);
-  POKEMON_LOOKUP.set(normalizeName(entry.slug), entry);
+  POKEMON_LOOKUP.set(normalizePokemonLookupToken(entry.name), entry);
+  POKEMON_LOOKUP.set(normalizePokemonLookupToken(entry.slug), entry);
 }
 
 for (const [alias, slug] of Object.entries(COMMON_ALIAS_TO_SLUG)) {
   const entry = POKEMON_BY_SLUG.get(slug);
-  if (entry) POKEMON_LOOKUP.set(normalizeName(alias), entry);
+  if (entry) POKEMON_LOOKUP.set(normalizePokemonLookupToken(alias), entry);
 }
 
 export type PokemonDataLookupResult =
@@ -683,7 +694,7 @@ export type PokemonDataLookupResult =
     };
 
 export function getPokemonData(name: string): PokemonDataLookupResult {
-  const normalizedInput = normalizeName(name);
+  const normalizedInput = normalizePokemonLookupToken(name);
   const aliasSlug = COMMON_ALIAS_TO_SLUG[normalizedInput];
   const aliasEntry = aliasSlug ? POKEMON_BY_SLUG.get(aliasSlug) : undefined;
   if (aliasEntry) return { source: "local", entry: aliasEntry };
@@ -697,5 +708,15 @@ export function getPokemonData(name: string): PokemonDataLookupResult {
     slug: fallbackSlug,
     fetchFromPokeApi: () => fetch(`${POKEAPI_BASE}/${fallbackSlug}`),
   };
+}
+
+export function getChampionsEntry(nameOrSlug: string): ChampionsPokemonEntry | null {
+  const hit = getPokemonData(nameOrSlug);
+  return hit.source === "local" ? hit.entry : null;
+}
+
+export function resolvePokemonSlug(nameOrSlug: string): string {
+  const hit = getPokemonData(nameOrSlug);
+  return hit.source === "local" ? hit.entry.slug : hit.slug;
 }
 

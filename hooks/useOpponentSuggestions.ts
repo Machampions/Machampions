@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { ensureUsage } from "./useUsage";
 import { useTopList } from "./useTopList";
+import { getChampionsEntry, resolvePokemonSlug } from "@/src/data/pokemon-registry";
 import { useAppStore } from "@/stores/appStore";
 
 export interface Suggestion {
@@ -35,7 +36,7 @@ export function usePoolSuggestions(side: "my" | "opp"): Suggestion[] {
   return useMemo(() => {
     if (!topList) return [];
     const usedSlugs = new Set<string>();
-    primaryPool.forEach((p) => p && usedSlugs.add(p.slug));
+    primaryPool.forEach((p) => p && usedSlugs.add(resolvePokemonSlug(p.slug)));
 
     const teammateBoost = new Map<string, { pct: number; from: string }>();
     primaryPool.forEach((p) => {
@@ -43,14 +44,24 @@ export function usePoolSuggestions(side: "my" | "opp"): Suggestion[] {
       const usage = usageCache.get(`${format}:${p.slug}`);
       if (!usage) return;
       for (const tm of usage.teammates) {
-        const existing = teammateBoost.get(tm.name);
+        const teammateSlug = resolvePokemonSlug(tm.name);
+        const existing = teammateBoost.get(teammateSlug);
         if (!existing || tm.pct > existing.pct) {
-          teammateBoost.set(tm.name, { pct: tm.pct, from: p.name });
+          teammateBoost.set(teammateSlug, { pct: tm.pct, from: p.name });
         }
       }
     });
 
     const scored = topList.entries
+      .map((e) => {
+        const canonicalSlug = resolvePokemonSlug(e.slug);
+        const legalEntry = getChampionsEntry(e.slug) ?? getChampionsEntry(e.displayName);
+        return {
+          ...e,
+          slug: canonicalSlug,
+          displayName: legalEntry?.name ?? e.displayName,
+        };
+      })
       .filter((e) => !usedSlugs.has(e.slug))
       .map((e) => {
         const boost = teammateBoost.get(e.slug);
