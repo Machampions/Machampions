@@ -16,7 +16,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Machampion",
+  title: "Machampions",
   description:
     "Pokémon Champions draft cockpit — meta-aware opponent prediction, coverage analysis, and next-pick recommendations.",
 };

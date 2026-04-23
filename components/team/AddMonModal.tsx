@@ -77,7 +77,7 @@ export function AddMonModal({ side, onClose }: Props) {
     };
   }, []);
 
-  const rows: Row[] = useMemo(() => {
+  const rows: Row[] = useMemo((): Row[] => {
     const needle = q.trim();
     if (needle) {
       const normalizedNeedle = normalizePokemonLookupToken(needle);

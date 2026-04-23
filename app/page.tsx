@@ -37,7 +37,7 @@ export default function Home() {
             className="h-9 w-9 shrink-0 [image-rendering:pixelated]"
           />
           <div className="hidden text-base font-semibold tracking-tight xl:block">
-            Machampion
+            Machampions
           </div>
           <div className="hidden h-[18px] w-px bg-border xl:block" />
           <FormatToggle />
