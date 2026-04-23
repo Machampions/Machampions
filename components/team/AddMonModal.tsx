@@ -110,17 +110,17 @@ export function AddMonModal({ side, onClose }: Props) {
       return ranked.slice(0, 30).map(({ score, legal, ...row }) => row);
     }
     if (side !== "opp" || !suggestions) return [];
-    return suggestions.map((s) => {
+    return suggestions.flatMap((s) => {
       const legalEntry = getChampionsEntry(s.slug) ?? getChampionsEntry(s.displayName);
-      if (!legalEntry) return null;
-      return {
+      if (!legalEntry) return [];
+      return [{
         slug: legalEntry.slug,
         displayName: legalEntry.name,
         spriteUrl: legalEntry.spriteUrl,
         usagePct: s.usagePct,
         recommended: true,
-      };
-    }).filter((row): row is Row => !!row);
+      }];
+    });
   }, [q, suggestions, side]);
 
   useEffect(() => {
